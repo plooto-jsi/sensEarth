@@ -1,3 +1,4 @@
+from sqlalchemy import text
 from fastapi import Depends, FastAPI
 import argparse
 from .component.router import router
@@ -11,7 +12,6 @@ from sqlalchemy.orm import Session
 from datetime import *
 import traceback
 from .component.exceptions import create_exception_handlers
-from .raw_storage import init_bucket
 
 
 app = FastAPI()
@@ -26,7 +26,15 @@ app.add_middleware(
 
 app.include_router(router)
 create_exception_handlers(app)
-init_bucket()
+
+@app.get("/test-db")
+def test(db: Session = Depends(get_db)):
+    try:
+        db.execute(text("SELECT 1;"))
+        return {"status": "connected"}
+    except Exception as e:
+        return {"status": "error", "details": str(e)}
+
 
 
 

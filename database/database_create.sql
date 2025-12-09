@@ -17,7 +17,7 @@ CREATE EXTENSION IF NOT EXISTS timescaledb;
 -- ===============================
 CREATE TABLE IF NOT EXISTS sensor_type (
     sensor_type_id SERIAL PRIMARY KEY,
-    name VARCHAR(128) NOT NULL,
+    name VARCHAR(64) NOT NULL,
     phenomenon VARCHAR(128) NOT NULL,
     unit VARCHAR(32) NOT NULL,
     value_min DOUBLE PRECISION,
@@ -30,9 +30,10 @@ CREATE TABLE IF NOT EXISTS sensor_type (
 -- ===============================
 CREATE TABLE IF NOT EXISTS sensor_node (
     node_id SERIAL PRIMARY KEY,
-    name VARCHAR(128) NOT NULL,
-    description TEXT,
-    metadata JSONB
+    node_label VARCHAR(64) NOT NULL,
+    node_serial VARCHAR(128),
+    location GEOGRAPHY(Point, 4326),
+    description TEXT
 );
 
 -- ===============================
@@ -40,13 +41,13 @@ CREATE TABLE IF NOT EXISTS sensor_node (
 -- ===============================
 CREATE TABLE IF NOT EXISTS sensor (
     sensor_id SERIAL PRIMARY KEY,
+    sensor_label VARCHAR(64) NOT NULL,
     node_id INT REFERENCES sensor_node(node_id) ON DELETE SET NULL,
     sensor_type_id INT REFERENCES sensor_type(sensor_type_id),
-    name VARCHAR(128) NOT NULL,
     description TEXT,
-    location GEOGRAPHY(Point, 4326), -- requires PostGIS
+    location GEOGRAPHY(Point, 4326),
     metadata JSONB,
-    UNIQUE(node_id, name)
+    UNIQUE(node_id, sensor_label)
 );
 
 -- ===============================
@@ -56,7 +57,6 @@ CREATE TABLE IF NOT EXISTS sensor_measurement (
     sensor_id INT REFERENCES sensor(sensor_id) ON DELETE CASCADE,
     timestamp_utc TIMESTAMPTZ NOT NULL,
     value DOUBLE PRECISION NOT NULL,
-    metadata JSONB,
     PRIMARY KEY(sensor_id, timestamp_utc)
 );
 

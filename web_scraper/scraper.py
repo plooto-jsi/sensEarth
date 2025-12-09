@@ -1,6 +1,7 @@
 import os
 import json
 import asyncio
+import argparse
 
 from fetcher import Fetcher
 from mapper import Mapper
@@ -36,7 +37,7 @@ class Scraper:
 
         self.fetch_interval = scraper_config.get("fetch_interval", 0)
         self.name = scraper_config.get("name", "Unnamed Scraper")
-        self.limit_records = scraper_config.get("limit_records", None)
+        self.limit_results = scraper_config.get("limit_results", None)
 
     def run_once(self):
         raw = self.fetcher.fetch(self.scraper_config["target_url"])
@@ -49,7 +50,7 @@ class Scraper:
         while True:
             try:
                 records = self.run_once()
-                records = records[: self.limit_records]
+                records = records[: self.limit_results] if self.limit_results else records
                 print(f"\n[{self.name}] Mapped records:")
                 for r in records:
                     print(r)
@@ -63,14 +64,17 @@ class Scraper:
 
 
 def load_configs(folder="configs", selected=None):
+    """Loads scraper and mapping configurations from JSON files"""
     configs = []
     folder_path = os.path.join(os.path.dirname(__file__), folder)
     for file in os.listdir(folder_path):
-        if not file.endswith(".json"):
+        if not file.endswith(".json"): # Only JSON files
             continue
+
         name = os.path.splitext(file)[0]
         if selected and name not in selected:
             continue
+        
         with open(os.path.join(folder_path, file), "r") as f:
             data = json.load(f)
             configs.append((data["scraper_config"], data["mapping_config"]))
@@ -78,7 +82,12 @@ def load_configs(folder="configs", selected=None):
 
 
 async def main():
-    configs = load_configs()
+    """"Loads configs and runs scrapers accordingly."""
+    parser = argparse.ArgumentParser(description="Anomaly Detector CLI")
+    parser.add_argument("--config", nargs="*", help="Specify which config(s) to use (none = all)")
+    args = parser.parse_args()
+    configs = load_configs(selected=args.config)
+
     scrapers = [Scraper(scraper_conf, mapping_conf) for scraper_conf, mapping_conf in configs]
     await asyncio.gather(*(s.run() for s in scrapers))
 
