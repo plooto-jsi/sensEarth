@@ -17,7 +17,7 @@ CREATE EXTENSION IF NOT EXISTS timescaledb;
 -- ===============================
 CREATE TABLE IF NOT EXISTS sensor_type (
     sensor_type_id SERIAL PRIMARY KEY,
-    name VARCHAR(64) NOT NULL,
+    name VARCHAR(64) UNIQUE NOT NULL,
     phenomenon VARCHAR(128) NOT NULL,
     unit VARCHAR(32) NOT NULL,
     value_min DOUBLE PRECISION,
@@ -31,8 +31,10 @@ CREATE TABLE IF NOT EXISTS sensor_type (
 CREATE TABLE IF NOT EXISTS sensor_node (
     node_id SERIAL PRIMARY KEY,
     node_label VARCHAR(64) NOT NULL,
-    node_serial VARCHAR(128),
-    location GEOGRAPHY(Point, 4326),
+    node_hash VARCHAR(128) UNIQUE NOT NULL,
+    location GEOGRAPHY(PointZ, 4326),
+    last_seen TIMESTAMPTZ DEFAULT NOW(),
+    status VARCHAR(32) DEFAULT 'active',
     description TEXT
 );
 
@@ -42,10 +44,13 @@ CREATE TABLE IF NOT EXISTS sensor_node (
 CREATE TABLE IF NOT EXISTS sensor (
     sensor_id SERIAL PRIMARY KEY,
     sensor_label VARCHAR(64) NOT NULL,
+    sensor_hash VARCHAR(128) UNIQUE NOT NULL,
     node_id INT REFERENCES sensor_node(node_id) ON DELETE SET NULL,
     sensor_type_id INT REFERENCES sensor_type(sensor_type_id),
     description TEXT,
-    location GEOGRAPHY(Point, 4326),
+    location GEOGRAPHY(PointZ, 4326),
+    last_seen TIMESTAMPTZ DEFAULT NOW(),
+    status VARCHAR(32) DEFAULT 'active',
     metadata JSONB,
     UNIQUE(node_id, sensor_label)
 );

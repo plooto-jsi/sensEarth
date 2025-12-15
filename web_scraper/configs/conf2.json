@@ -5,7 +5,7 @@
     "target_url": "https://www.arso.gov.si/xml/vode/hidro_podatki_zadnji.xml",
     "fetch_interval": 50,
     "selector": "None",
-    "limit_results": 100,
+    "limit_results": 1,
     "format": "xml"
   },
 

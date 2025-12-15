@@ -1,4 +1,5 @@
 # Run
+Start docker desktop
 
 docker-compose pull 
 
