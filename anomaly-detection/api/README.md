@@ -1,18 +1,13 @@
-#run app
+# API for Anomaly Detection Algorithms
 
-conda activate sensearth
-python -m uvicorn api.src.main:app --reload
+# Run API
 
-##For debbuging use 
-python -m uvicorn api.src.main:app --reload --log-level debug
+Move to `cd anomaly-detection`
+Activate conda environment `conda activate sensearth`
+Run main aplication `python -m uvicorn api.src.main:app --reload`
 
-API for Anomaly Detection Algorithms
+For debbuging use `python -m uvicorn api.src.main:app --reload --log-level debug`
 
 
 Project structure based on https://github.com/zhanymkanov/fastapi-best-practices?tab=readme-ov-file#project-structure
 
-TEMPLATES
-https://themewagon.github.io/DashboardKit
-
-echo api
-https://www.youtube.com/watch?v=-oCHXAUwZt0
