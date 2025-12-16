@@ -1,17 +1,17 @@
 {
   "scraper_config" :{
-    "name": "ARSO Water Levels",
+    "name": "ARSO_HydroStation_Scraper",
     "description": "Scraper for water level data from ARSO",
     "target_url": "https://www.arso.gov.si/xml/vode/hidro_podatki_zadnji.xml",
     "fetch_interval": 50,
     "selector": "None",
-    "limit_results": 1,
-    "format": "xml"
+    "limit_results": 100,
+    "format": "xml",
+    "root_tag": "postaja"
+
   },
 
   "mapping_config": {
-    "root_element": "postaja",
-
     "node": {
       "node_label": "ARSO_Hydro_Station",
       "node_serial": "sifra",
@@ -22,8 +22,11 @@
 
     "sensors": [
       {
-        "sensor_label": "sifra_water_level",
+        "sensor_label": "water_level",
         "sensor_name": "ARSO Water Level Sensor",
+        "longitude": "wgs84_dolzina",
+        "latitude": "wgs84_sirina",
+        "altitude": "kota_0",
         "sensor_description": "Water level sensor data from ARSO",
         "measurements": [
           {"value": "vodostaj", "timestamp_utc": "datum"}
@@ -37,8 +40,11 @@
         }
       },
       {
-        "sensor_label": "sifra_water_temperature",
+        "sensor_label": "water_temperature",
         "sensor_name": "ARSO Water Temperature Sensor",
+        "longitude": "wgs84_dolzina",
+        "latitude": "wgs84_sirina",
+        "altitude": "kota_0",
         "sensor_description": "Water temperature sensor data from ARSO",
         "measurements": [
           {"value": "temp_vode", "timestamp_utc": "datum"}

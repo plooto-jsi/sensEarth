@@ -21,6 +21,9 @@ class Mapper:
         return config_val
 
     def map_record(self, record: dict) -> dict:
+        """
+        Maps database fields to record values based on mapping_config.
+        """
         return {
             db_key: self._map_value(config_value, record)
             for db_key, config_value in self.mapping_config.items()

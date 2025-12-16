@@ -1,10 +1,9 @@
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List
 import hashlib
 import os
 import json
 import asyncio
 import argparse
-
 import requests
 
 from fetcher import Fetcher
@@ -28,6 +27,12 @@ os.makedirs(STATE_DIR, exist_ok=True)
 
 class Scraper:
     def __init__(self, scraper_config: dict, mapping_config: dict):
+        """
+        Fetcher is responsible for fetching raw data from target URL.
+        Extractor is responsible for extracting records from raw data based on format.
+        Mapper is responsible for mapping extracted data to the required format.
+        State is used to track registered nodes/sensors in JSON file as hash->id mapping.
+        """
         self.scraper_config = scraper_config
         self.mapping_config = mapping_config
 
@@ -37,8 +42,6 @@ class Scraper:
         fmt = scraper_config.get("format")
         if fmt not in EXTRACTOR_MAP:
             raise ValueError(f"Unsupported format: {fmt}")
-        if fmt == "html":
-            self.extractor = EXTRACTOR_MAP[fmt](selector=scraper_config.get("selector"))
         else:
             self.extractor = EXTRACTOR_MAP[fmt]()
 
@@ -48,34 +51,33 @@ class Scraper:
 
         # Load or initialize state
         self.state_file = os.path.join(STATE_DIR, f"{self.name}_state.json")
-        if os.path.exists(self.state_file):
-            with open(self.state_file, "r") as f:
-                self.state = json.load(f)
-        else:
-            self.state = {"nodes": {}, "sensors": {}}
-
-    def run_once(self):
-        raw = self.fetcher.fetch(self.scraper_config["target_url"])
-        extracted = self.extractor.extract(raw)
-        mapped = self.mapper.map_records(extracted)
-        return mapped
+        self.state = self.load_state()
 
     def save_state(self):
         with open(self.state_file, "w") as f:
             json.dump(self.state, f, indent=2)
 
+    def load_state(self):
+        if os.path.exists(self.state_file):
+            with open(self.state_file, "r", encoding="utf-8") as f:
+                return json.load(f)
+        return {"nodes": {}, "sensors": {}}
+
     def register(self, payload: Dict) -> Dict:
-        response = requests.post(f"{API_URL}/register", json=payload)
-        data = response.json()
+        try: 
+            response = requests.post(f"{API_URL}/register", json=payload)
+            data = response.json()
 
-        # Update local state with returned ids
-        self.state["nodes"].update(data.get("nodes", {}))
-        self.state["sensors"].update(data.get("sensors", {}))
-        self.save_state()
-        return data
+            # Update state with returned hashes, ids and save
+            self.state["nodes"].update(data.get("nodes", {}))
+            self.state["sensors"].update(data.get("sensors", {}))
+            self.save_state()
+            return data
+        except Exception as e:
+            print(f"Error during registration: {e}")
+            return {}
 
-    def send_measurements(self, payload: list[dict]):
-        # replace sensor hash with sensor_id
+    def send_measurements(self, payload:  List[Dict]):
         measurements = []
         for entry in payload:
             for sensor in entry.get("sensors", []):
@@ -86,7 +88,6 @@ class Scraper:
                     continue
                 for m in sensor.get("measurements", []):
                     measurements.append({
-                        "sensor_id": sensor_id,
                         "sensor_hash": sensor_hash,
                         "timestamp_utc": m["timestamp_utc"],
                         "value": m["value"]
@@ -104,39 +105,26 @@ class Scraper:
         """
         dumped = json.dumps(obj, sort_keys=True, separators=(",", ":"))
         return hashlib.sha256(dumped.encode()).hexdigest()
-    
-    def hash_records(self, records: list[dict]) -> list[dict]:
-        """
-        Checks which records have unregistered nodes/sensors.
-        """
 
-        hashed = []
+    def hash_records(self, records: List[Dict]) -> List[Dict]:
+        """
+        Hash nodes and sensors in records if not already present.
+        """
         for record in records:
-            identifying_fields = {}
-
-            node_data = record.get("node")
-            sensors = record.get("sensors", [])
-
-            if "node_hash" not in record:
-                node_data["node_hash"] = self.stable_hash(node_data)
-
-            for sensor in sensors:
+            node = record.get("node", {})
+            node["node_hash"] = node.get("node_hash") or self.stable_hash(node)
+            for sensor in record.get("sensors", []):
                 if "sensor_hash" not in sensor:
-                    if node_data: # sensor has a node
-                        identifying_fields["node_hash"] = node_data["node_hash"]
-
-                    identifying_fields = {
-                        "node_hash": node_data.get("node_hash"),
+                    sensor["sensor_hash"] = self.stable_hash({
+                        "node_hash": node["node_hash"],
                         "sensor_type": sensor.get("sensor_label"),
                         "longitude": sensor.get("longitude"),
                         "latitude": sensor.get("latitude"),
-                        "altitude": sensor.get("altitude") if "altitude" in sensor else None,
-                    }
-                    sensor["sensor_hash"] = self.stable_hash(identifying_fields)
-            hashed.append(record)
-        return hashed
-    
-    def unregistered_records(self, records: list[dict]) -> list[dict]:
+                        "altitude": sensor.get("altitude")
+                    })
+        return records
+
+    def unregistered_records(self, records: List[Dict]) -> List[Dict]:
         """
         Identifies records with unregistered nodes/sensors.
         Returns a payload suitable for /register endpoint.
@@ -159,23 +147,23 @@ class Scraper:
 
         return to_register
 
-
+    def run_once(self):
+        raw = self.fetcher.fetch(self.scraper_config["target_url"])
+        extracted = self.extractor.extract(raw, self.scraper_config["root_tag"])
+        mapped = self.mapper.map_records(extracted)
+        return mapped
 
     async def run(self):
         while True:
             try:
+                #Scrape and map data
                 records = self.run_once()
                 records = records[: self.limit_results] if self.limit_results else records
 
+                # Hash every record, register unregistered nodes/sensors and send all measurements
                 records = self.hash_records(records)
                 unregistered = self.unregistered_records(records)
                 self.register(unregistered)
-
-                print(f"\n[{self.name}] Mapped records:")
-                for r in records:
-                    print(r)
-
-                # Then send measurements using registered IDs
                 self.send_measurements(records)
 
                 print(f"[{self.name}] Total records processed: {len(records)}\n")
@@ -183,12 +171,15 @@ class Scraper:
             except Exception as e:
                 print(f"[{self.name}] Error during scraping: {e}")
 
-            if self.fetch_interval == 0:
+            if self.fetch_interval <= 0:
                 break
             await asyncio.sleep(self.fetch_interval)
 
 
 def load_configs(folder="configs", selected=None):
+    """
+    Loads every .json config pair from specified folder.
+    """
     configs = []
     folder_path = os.path.join(os.path.dirname(__file__), folder)
     for file in os.listdir(folder_path):
