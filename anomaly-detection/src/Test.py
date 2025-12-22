@@ -49,7 +49,7 @@ from consumer import ConsumerAbstract
 
 class Test(ConsumerAbstract):
     def __init__(self, conf: Dict[Any, Any] = None, configuration_location: str = None) -> None:
-        super().__init__(configuration_location=configuration_location) # for clustering testing configuration_location="clustering.json" | isol_forest "isolation_forest.json"
+        super().__init__(configuration_location=configuration_location) 
         self.data_buffer = []  # Store manually inserted data
 
         self.conf = conf
@@ -158,9 +158,7 @@ class Test(ConsumerAbstract):
 
             if message is not None:    
                 self.data_buffer.append((message, self.anomalies[i].message_insert(d)))
-                #self.calculate_confusion_matrix()
                 self.classify_data()
-                #print("printing data buffer", self.data_buffer[0], "\n", self.pred_is_anomaly, "\n")
 
     def classify_data(self) -> None:
         """Classifies the latest anomaly detection result."""

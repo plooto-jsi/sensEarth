@@ -12,9 +12,6 @@ from multiprocessing import Process
 from src.Test import Test
 from src.consumer import ConsumerAbstract, ConsumerFile, ConsumerKafka
 
-from src.AnomalyDetectorWrapper import AnomalyDetectorWrapper
-from sklearn.base import BaseEstimator
-from sklearn.model_selection import GridSearchCV, RandomizedSearchCV
 import numpy as np
 
 from itertools import product
