@@ -99,3 +99,4 @@ web_scraper/
 |- state/              # Persistent state files (auto-generated)
 |- README.md
 ```
+

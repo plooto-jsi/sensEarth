@@ -12,13 +12,16 @@ def generate_object_name(prefix: str, url: str, ext: str) -> str:
     h = hashlib.md5(url.encode()).hexdigest()[:10]
     return f"{prefix}/{ts}_{h}.{ext}"
 
-
 def store_raw_response(response):
-    """Save raw HTTP body to MinIO."""
-    object_name = generate_object_name("raw", response.url, "bin")
+    """Save raw HTTP body to MinIO (same as before)."""
+    object_name = generate_object_name("raw",response.url,"bin")
+
     upload_raw_data(
         object_name,
-        response.body,
-        content_type=response.headers.get("Content-Type", b"application/octet-stream").decode()
+        response.content, 
+        content_type=response.headers.get(
+        "Content-Type", "application/octet-stream"
+        )
     )
+
     return object_name
