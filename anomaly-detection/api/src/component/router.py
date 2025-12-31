@@ -10,18 +10,23 @@ from sqlalchemy import text
 import pandas as pd
 from psycopg2.extras import execute_values
 
+from ..modeling_services.anomaly_detection_model import AnomalyDetectionModel
+
 from ..database import get_db
 from .schemas import *
 from .exceptions import *
 from .service import *
 from .utils import *
-import main
 
 
 CONFIG_DIR = os.path.abspath("configuration")
 DATA_DIR = os.path.abspath("data")
 
 router = APIRouter()
+
+MODEL_REGISTRY = {
+    "anomaly_detection": AnomalyDetectionModel,
+}
 
 @router.post("/register")
 def register(payload: RegisterPayload, db: Session = Depends(get_db)) -> Dict[str, Dict[str, int]]:
@@ -236,3 +241,50 @@ def data_ingest(payload: List[MeasurementPayload], db: Session = Depends(get_db)
 
     
     return {"status": "ok", "inserted_measurements": len(payload)}
+
+@router.post("/runModel")
+async def runModels(request: Request, db: Session = Depends(get_db)) -> Dict[str, Any]:
+    """
+    Run specified model for a sensor with given configuration.
+    """
+    payload = await request.json()
+    sensor_id = payload.get("sensor_id")
+    model_type = payload.get("model_type")
+    algorithm_name = payload.get("algorithm_name")
+    sliding_window_size = payload.get("sliding_window_size", 100)
+
+    if not all([sensor_id, model_type, algorithm_name]):
+        raise HTTPException(status_code=400, detail="Missing required fields in payload")
+
+    sensor_row = db.execute(
+        text("SELECT sensor_id FROM sensor WHERE sensor_id = :sensor_id"),
+        {"sensor_id": sensor_id}
+    ).fetchone()
+
+    if not sensor_row:
+        raise HTTPException(status_code=404, detail=f"Sensor '{sensor_id}' not found")
+
+    sensor_id = sensor_row[0]
+
+    ModelClass = MODEL_REGISTRY.get(model_type)
+    if not ModelClass:
+        raise HTTPException(status_code=400, detail=f"Unsupported model type '{model_type}'")
+
+    model_instance = ModelClass(
+        sensor_id=sensor_id,
+        algorithm_name=algorithm_name,
+        sliding_window_size=sliding_window_size
+    )
+
+    model_instance.data = db.execute(
+        text("""
+            SELECT value FROM sensor_measurement
+            WHERE sensor_id = :sensor_id
+            ORDER BY timestamp_utc DESC
+            LIMIT :limit
+        """),
+        {"sensor_id": sensor_id, "limit": sliding_window_size}
+    ).fetchall()
+    model_instance.run()
+
+    return {"status": "model run completed"}
