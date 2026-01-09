@@ -276,15 +276,28 @@ async def runModels(request: Request, db: Session = Depends(get_db)) -> Dict[str
         sliding_window_size=sliding_window_size
     )
 
-    model_instance.data = db.execute(
+    model_instance.data = []
+    sensor_data = db.execute(
         text("""
-            SELECT value FROM sensor_measurement
+            SELECT timestamp_utc, value FROM sensor_measurement
             WHERE sensor_id = :sensor_id
             ORDER BY timestamp_utc DESC
             LIMIT :limit
         """),
         {"sensor_id": sensor_id, "limit": sliding_window_size}
     ).fetchall()
-    model_instance.run()
 
-    return {"status": "model run completed"}
+    for measurement in sensor_data:
+        print("---- DATA ROW ----")
+        ts_float = float(measurement.timestamp_utc.timestamp())
+        ftr_vector = float(measurement.value)
+        print(measurement, ts_float, ftr_vector)
+
+        dict_vector = {}
+        dict_vector["ftr_vector"] = [ftr_vector]
+        dict_vector["timestamp"] = ts_float
+        model_instance.data.append(dict_vector)
+
+    results = model_instance.run()
+
+    return {"status": "model run completed", "results": results}

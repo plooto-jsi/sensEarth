@@ -11,3 +11,6 @@ For debbuging use `python -m uvicorn api.src.main:app --reload --log-level debug
 
 Project structure based on https://github.com/zhanymkanov/fastapi-best-practices?tab=readme-ov-file#project-structure
 
+cd anomaly-detection
+conda activate sensearth
+python -m uvicorn api.src.main:app --reload

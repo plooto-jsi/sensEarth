@@ -70,6 +70,8 @@ class Test(ConsumerAbstract):
         else:
             print("No configuration was given")
 
+
+
     def configure(self, con: Dict[Any, Any]) -> None:
         self.file_name = con.get("file_name", None)
         self.file_path = self.file_name
@@ -146,19 +148,32 @@ class Test(ConsumerAbstract):
 
                     if message is not None:    
                         self.data_buffer.append((row, self.anomalies[i].message_insert(d)))
-                        #self.calculate_confusion_matrix()
 
-    def read_streaming_data(self, d):
-        message = d
-        for i, a in enumerate(self.anomalies):
-            if(self.filtering is not None and eval(self.filtering[i]) is not None):
-                #extract target time and tolerance
-                target_time, tolerance = eval(self.filtering[i])
-                message = self.filter_by_time(d, target_time, tolerance)
+    def read_streaming_data(self, data):
+        for measurement in data:
+            d = {
+                "timestamp": measurement["timestamp"],
+                "ftr_vector": measurement["ftr_vector"]
+            }
 
-            if message is not None:    
-                self.data_buffer.append((message, self.anomalies[i].message_insert(d)))
-                self.classify_data()
+            row = []
+            row.append(d["timestamp"])
+            row.extend(d["ftr_vector"])
+
+            message = d
+
+            for i, a in enumerate(self.anomalies):
+                if self.filtering is not None and eval(self.filtering[i]) is not None:
+                    target_time, tolerance = eval(self.filtering[i])
+                    message = self.filter_by_time(message, target_time, tolerance)
+
+                if message is not None:
+                    self.data_buffer.append(
+                        (row, self.anomalies[i].message_insert(d))
+                    )
+
+        return self.data_buffer
+
 
     def classify_data(self) -> None:
         """Classifies the latest anomaly detection result."""
