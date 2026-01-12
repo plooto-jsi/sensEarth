@@ -243,15 +243,15 @@ def data_ingest(payload: List[MeasurementPayload], db: Session = Depends(get_db)
     return {"status": "ok", "inserted_measurements": len(payload)}
 
 @router.post("/runModel")
-async def runModels(request: Request, db: Session = Depends(get_db)) -> Dict[str, Any]:
+async def runModel(payload: runModelPayload, db: Session = Depends(get_db)) -> Dict[str, Any]:
     """
     Run specified model for a sensor with given configuration.
+    Add new models to MODEL_REGISTRY.
     """
-    payload = await request.json()
-    sensor_id = payload.get("sensor_id")
-    model_type = payload.get("model_type")
-    algorithm_name = payload.get("algorithm_name")
-    sliding_window_size = payload.get("sliding_window_size", 100)
+    sensor_id = payload.sensor_id
+    model_type = payload.model_type
+    algorithm_name = payload.algorithm_name
+    sliding_window_size = payload.sliding_window_size
 
     if not all([sensor_id, model_type, algorithm_name]):
         raise HTTPException(status_code=400, detail="Missing required fields in payload")
@@ -281,23 +281,13 @@ async def runModels(request: Request, db: Session = Depends(get_db)) -> Dict[str
         text("""
             SELECT timestamp_utc, value FROM sensor_measurement
             WHERE sensor_id = :sensor_id
-            ORDER BY timestamp_utc DESC
+            ORDER BY timestamp_utc ASC
             LIMIT :limit
         """),
         {"sensor_id": sensor_id, "limit": sliding_window_size}
     ).fetchall()
 
-    for measurement in sensor_data:
-        print("---- DATA ROW ----")
-        ts_float = float(measurement.timestamp_utc.timestamp())
-        ftr_vector = float(measurement.value)
-        print(measurement, ts_float, ftr_vector)
-
-        dict_vector = {}
-        dict_vector["ftr_vector"] = [ftr_vector]
-        dict_vector["timestamp"] = ts_float
-        model_instance.data.append(dict_vector)
-
+    model_instance.data_ingestion(sensor_data)
     results = model_instance.run()
 
     return {"status": "model run completed", "results": results}

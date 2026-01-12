@@ -192,7 +192,7 @@ def load_configs(folder="configs", selected=None):
             data = json.load(f)
             configs.append((data["scraper_config"], data["mapping_config"]))
     return configs
-
+ 
 
 async def main():
     parser = argparse.ArgumentParser(description="Anomaly Detector CLI")
