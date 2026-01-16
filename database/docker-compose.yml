@@ -1,5 +1,6 @@
 version: '3.9'
 
+# Core sensearth Database Service
 services:
   timescaledb:
     container_name: timescaledb
@@ -12,6 +13,43 @@ services:
       - "5433:5432"
     volumes:
       - ./data:/var/lib/postgresql/data
+    restart: always
+
+# Monitoring Database Service
+  watchdog-db:
+    container_name: watchdog-db
+    image: timescale/timescaledb-ha:pg14-latest
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: monitoring_db
+    ports:
+      - "5434:5432"
+    volumes:
+      - ./data/watchdog:/var/lib/postgresql/data
+    restart: always
+
+# Monitoring API Service
+  watchdog-api:
+    image: python:3.8.20
+    container_name: watchdog-api
+    working_dir: /app
+    volumes:
+      - ./watchdog:/app
+    command: >
+      uvicorn monitoring.api:app
+      --host 0.0.0.0
+      --port 8001
+      --reload
+    ports:
+      - "8001:8001"
+    depends_on:
+      - watchdog-db
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
     restart: always
 
   pgadmin:
