@@ -1,6 +1,6 @@
 import requests, threading
 
-WATCHDOG_URL = "http://watchdog:8000"
+WATCHDOG_URL = "http://watchdog-api:8001"
 
 def _send(path, payload):
     try:

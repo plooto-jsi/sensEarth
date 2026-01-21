@@ -13,6 +13,8 @@ from extractors.xml_extractor import XMLExtractor
 # from extractors.csv_extractor import CSVExtractor
 # from extractors.html_extractor import HTMLExtractor
 
+from monitoring.client import emit_event, emit_metric, emit_heartbeat
+
 EXTRACTOR_MAP = {
     "xml": XMLExtractor,
     # "json": JSONExtractor,
@@ -72,6 +74,7 @@ class Scraper:
             self.state["nodes"].update(data.get("nodes", {}))
             self.state["sensors"].update(data.get("sensors", {}))
             self.save_state()
+            
             return data
         except Exception as e:
             print(f"Error during registration: {e}")

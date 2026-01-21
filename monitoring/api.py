@@ -12,6 +12,7 @@ app = FastAPI(title="WatchDog")
 @app.post("/heartbeat")
 def heartbeat(payload: dict):
     payload["timestamp"] = datetime.utcnow()
+    print("Heartbeat received:", payload)
 
 @app.post("/event")
 def event(payload: dict):
@@ -23,7 +24,7 @@ def metric(payload: dict):
 
 @app.get("/status")
 def system_status():
-    return # compute_system_health()
+    return 
 
 @app.get("/test-db")
 def test(db: Session = Depends(get_db)):
