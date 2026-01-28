@@ -19,6 +19,7 @@ from .schemas import *
 from .exceptions import *
 from .service import *
 from .utils import *
+from ..logger import logger
 
 CONFIG_DIR = os.path.abspath("configuration")
 DATA_DIR = os.path.abspath("data")
@@ -40,8 +41,10 @@ def register(payload: RegisterPayload, db: Session = Depends(get_db)) -> Dict[st
         "sensors": {sensor_hash: sensor_id, ...}
     }
     """
+    logger.info(f"Register endpoint called with payload: {payload}")
 
     if not payload:
+        logger.warning("Empty payload received in register endpoint")
         raise HTTPException(status_code=400, detail="Empty payload")
 
     return register_enteties(payload, db)
@@ -55,9 +58,10 @@ def data_ingest(payload: List[MeasurementPayload], db: Session = Depends(get_db)
     - timestamp_utc: str
     - value: str
     """
-    print("Data ingest called with", len(payload), "measurements")
+    logger.info(f"Data ingest endpoint called with payload of length: {len(payload)}")
     
     if not payload:
+        logger.warning("Empty payload received in data ingest endpoint")
         raise HTTPException(status_code=400, detail="Empty payload")
 
     return ingest_measurements(payload, db)
@@ -68,4 +72,6 @@ async def run_model(payload: runModelPayload, db: Session = Depends(get_db)) -> 
     Run specified model for a sensor with given configuration.
     Add new models to MODEL_REGISTRY.
     """
+    logger.info(f"Run model endpoint called with payload: {payload}")
+
     return await model_results(payload, MODEL_REGISTRY, db)

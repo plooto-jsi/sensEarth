@@ -24,7 +24,7 @@ from .schemas import *
 from .exceptions import *
 from .utils import *
 from .service import *
-
+from ..logger import logger
 
 
 CONFIG_DIR = os.path.abspath("configuration")
@@ -237,6 +237,7 @@ async def model_results(payload: runModelPayload, MODEL_REGISTRY: Dict[str, Any]
     sliding_window_size = payload.sliding_window_size
 
     if not all([sensor_id, model_type, algorithm_name]):
+        logger.error("Missing required fields in runModel payload")
         raise HTTPException(status_code=400, detail="Missing required fields in payload")
 
     sensor_row = db.execute(
