@@ -112,7 +112,7 @@ def register_enteties(payload: RegisterPayload, db: Session = Depends(get_db)) -
         # -------------------------
         # SENSOR TYPE UPSERT
         # -------------------------
-        stype = sensor_data.sensor_type  # Pydantic object
+        stype = sensor_data.sensor_type 
         q_type = text("""
             INSERT INTO sensor_type (name, phenomenon, unit, value_min, value_max)
             VALUES (:name, :phenomenon, :unit, :min, :max)

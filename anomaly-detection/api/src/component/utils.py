@@ -10,3 +10,4 @@ def create_location_params(longitude: Optional[float], latitude: Optional[float]
             return "ST_SetSRID(ST_MakePoint(:lon, :lat, :alt), 4326)", {"lon": longitude, "lat": latitude, "alt": altitude}
         return "ST_SetSRID(ST_MakePoint(:lon, :lat), 4326)", {"lon": longitude, "lat": latitude}
     return "NULL", {}
+

@@ -20,7 +20,6 @@ from .exceptions import *
 from .service import *
 from .utils import *
 
-
 CONFIG_DIR = os.path.abspath("configuration")
 DATA_DIR = os.path.abspath("data")
 
