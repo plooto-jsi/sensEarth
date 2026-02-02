@@ -223,8 +223,36 @@ def ingest_measurements(payload: dataIngestPayload, db: Session = Depends(get_db
             conn.close()
     db.commit()
 
-    
     return {"status": "ok", "inserted_measurements": len(payload)}
+
+def create_model(request: Dict, db: Session = Depends(get_db)):
+    """
+    Create a new model in the database.
+    """
+    model_name = request.get("model_name")
+    model_description = request.get("model_description")
+    model_config = request.get("model_config")
+
+    q_model = text("""
+        INSERT INTO model (name, description, config)
+        VALUES (:name, :description, :config)
+        RETURNING model_id
+    """)
+
+    try:
+        model_id = db.execute(
+            q_model,
+            {
+                "name": model_name,
+                "description": model_description,
+                "config": model_config
+            }
+        ).fetchone()[0]
+    except Exception as e:
+        logger.error(f"Error creating model: {e}")
+        raise HTTPException(status_code=500, detail="Failed to create model")
+
+    return {"model_id": model_id}
 
 async def model_results(payload: runModelPayload, MODEL_REGISTRY: Dict[str, Any], db: Session = Depends(get_db)) -> Dict[str, Any]:
     """

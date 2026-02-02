@@ -33,8 +33,8 @@ MODEL_REGISTRY = {
 @router.post("/register")
 def register(payload: RegisterPayload, db: Session = Depends(get_db)) -> Dict[str, Dict[str, int]]:
     """
-    Returns a mapping of node_hash to node_id and sensor_hash to sensor_id.
     Registers nodes and sensors from the payload.
+    Returns a mapping of node_hash to node_id and sensor_hash to sensor_id.
     Returns:
     {
         "nodes": {node_hash: node_id, ...},
@@ -59,12 +59,28 @@ def data_ingest(payload: List[MeasurementPayload], db: Session = Depends(get_db)
     - value: str
     """
     logger.info(f"Data ingest endpoint called with payload of length: {len(payload)}")
-    
+
     if not payload:
         logger.warning("Empty payload received in data ingest endpoint")
         raise HTTPException(status_code=400, detail="Empty payload")
 
     return ingest_measurements(payload, db)
+
+@router.post("/RegisterModel")
+def register_model(request: Dict, db: Session = Depends(get_db)):
+    """
+    Register a new model based on the request payload.
+    Parameters:
+    """
+
+    if not request:
+        logger.warning("Empty request received in register model endpoint")
+        raise HTTPException(status_code=400, detail="Empty request")
+
+    model = create_model(request, db)
+    return {
+        "model": model
+    }
 
 @router.post("/runModel")
 async def run_model(payload: runModelPayload, db: Session = Depends(get_db)) -> Dict[str, Any]:
