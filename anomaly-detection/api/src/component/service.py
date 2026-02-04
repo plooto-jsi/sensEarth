@@ -15,6 +15,8 @@ from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 from psycopg2.extras import execute_values
+from psycopg2.extras import Json
+
 
 from ..database import get_db
 from ..modeling_services.anomaly_detection_model import AnomalyDetectionModel
@@ -227,37 +229,82 @@ def ingest_measurements(payload: dataIngestPayload, db: Session = Depends(get_db
 
 def create_model(request: Dict, db: Session = Depends(get_db)):
     """
-    Create a new model in the database.
+    Create a new model and optionally associate it with a sensor.
+
+    Expected keys in request:
+    - model_name: str (required)
+    - model_description: str (optional)
+    - model_parameters: dict (optional, stored as JSONB)
+    - sensor_id_list: list[int] (optional) Allows linking model to multiple sensors.
+
+    Returns:
+    {
+        "model_id": int
+    }
     """
     model_name = request.get("model_name")
     model_description = request.get("model_description")
-    model_config = request.get("model_config")
+    model_parameters = request.get("model_parameters", {})
+    sensor_id_list = request.get("sensor_id_list", [])
 
-    q_model = text("""
-        INSERT INTO model (name, description, config)
-        VALUES (:name, :description, :config)
-        RETURNING model_id
-    """)
+    if not model_name or model_name == "":
+        logger.warning("Model name is required")
+        raise HTTPException(status_code=400, detail="model_name is required")
 
     try:
+        # Create model
+        q_model = text("""
+            INSERT INTO model (name, description, parameters)
+            VALUES (:name, :description, :parameters)
+            RETURNING model_id
+        """)
+
         model_id = db.execute(
             q_model,
             {
                 "name": model_name,
                 "description": model_description,
-                "config": model_config
+                "parameters": Json(model_parameters)
             }
-        ).fetchone()[0]
+        ).scalar_one()
+        logger.info(f"Model '{model_name}' created with id {model_id}")
+
+        # Optionally associate sensor
+        for sensor_id in set(sensor_id_list):
+            if sensor_id is not None:
+                q_link = text("""
+                    INSERT INTO model_sensor (model_id, sensor_id)
+                    SELECT :model_id, :sensor_id
+                    WHERE EXISTS (
+                        SELECT 1 FROM sensor WHERE sensor_id = :sensor_id
+                    )
+                    ON CONFLICT DO NOTHING
+                """)
+
+                result = db.execute(
+                    q_link,
+                    {"model_id": model_id, "sensor_id": sensor_id}
+                )
+
+                if result.rowcount == 0:
+                    logger.warning(
+                        f"Sensor ID {sensor_id} not found. Model created without association."
+                    )
+
+        db.commit()
     except Exception as e:
-        logger.error(f"Error creating model: {e}")
+        db.rollback()
+        logger.error("Error creating model", exc_info=True)
         raise HTTPException(status_code=500, detail="Failed to create model")
 
     return {"model_id": model_id}
+
 
 async def model_results(payload: runModelPayload, MODEL_REGISTRY: Dict[str, Any], db: Session = Depends(get_db)) -> Dict[str, Any]:
     """
     Run specified model for a sensor with given configuration.
     Add new models to MODEL_REGISTRY.
+    Model name is UNIQUE so we can identify models by name.
     """
     sensor_id = payload.sensor_id
     model_type = payload.model_type

@@ -14,3 +14,27 @@ Project structure based on https://github.com/zhanymkanov/fastapi-best-practices
 cd anomaly-detection
 conda activate sensearth
 python -m uvicorn api.src.main:app --reload
+
+# Register model example
+
+```
+{
+  "model_name": "border_check_AD",
+  "model_description": "Detects anomalies in sensor data",
+  "model_parameters": {
+    "anomaly_detection_alg": ["BorderCheck()"],
+    
+    "anomaly_detection_conf": [
+        {
+            "input_vector_size": 1,
+            "warning_stages": [2.5, 0.0],
+            "UL": 3.0,
+            "LL": -0.4,
+            "output": ["TerminalOutput()"],
+            "output_conf": [{}]
+        }
+    ]
+},
+  "sensor_id_list" : [1,2,3]
+}
+```
