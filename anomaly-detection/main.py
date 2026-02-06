@@ -58,7 +58,7 @@ def start_consumer(args: argparse.Namespace) -> None:
         consumer = ConsumerFile(configuration_location=args.config)
 
     elif args.test:
-        test_instance = Test(configuration_location=args.config)
+        test_instance = Test(configuration_location="border_check.json")
         test_instance.read_streaming_data(args.data)
         return test_instance
 

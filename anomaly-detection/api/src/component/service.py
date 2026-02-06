@@ -29,6 +29,10 @@ from .service import *
 from ..logger import logger
 
 
+MODEL_REGISTRY = {
+    "anomaly_detection": AnomalyDetectionModel,
+}
+
 CONFIG_DIR = os.path.abspath("configuration")
 DATA_DIR = os.path.abspath("data")
 
@@ -270,6 +274,7 @@ def create_model(request: Dict, db: Session = Depends(get_db)):
         logger.info(f"Model '{model_name}' created with id {model_id}")
 
         # Optionally associate sensor
+
         for sensor_id in set(sensor_id_list):
             if sensor_id is not None:
                 q_link = text("""
@@ -300,53 +305,80 @@ def create_model(request: Dict, db: Session = Depends(get_db)):
     return {"model_id": model_id}
 
 
-async def model_results(payload: runModelPayload, MODEL_REGISTRY: Dict[str, Any], db: Session = Depends(get_db)) -> Dict[str, Any]:
+async def model_results(payload: Dict, MODEL_REGISTRY: Dict[str, Any], db: Session = Depends(get_db)) -> Dict[str, Any]:
     """
     Run specified model for a sensor with given configuration.
     Add new models to MODEL_REGISTRY.
     Model name is UNIQUE so we can identify models by name.
     """
-    sensor_id = payload.sensor_id
-    model_type = payload.model_type
-    algorithm_name = payload.algorithm_name
-    sliding_window_size = payload.sliding_window_size
 
-    if not all([sensor_id, model_type, algorithm_name]):
-        logger.error("Missing required fields in runModel payload")
+    model_name = payload.get("model_name")
+    sensor_id_list = set(payload.get("sensor_id_list", []))
+    parameters = payload.get("parameters", {})
+    sliding_window_size = payload.get("sliding_window_size", 100)
+
+    if not model_name:
+        logger.error("Missing model_name in runModel payload")
         raise HTTPException(status_code=400, detail="Missing required fields in payload")
 
-    sensor_row = db.execute(
-        text("SELECT sensor_id FROM sensor WHERE sensor_id = :sensor_id"),
-        {"sensor_id": sensor_id}
+    row_model = db.execute(
+        text("SELECT model_id, model_type FROM model WHERE name = :model_name"),
+        {"model_name": model_name}
     ).fetchone()
 
-    if not sensor_row:
-        raise HTTPException(status_code=404, detail=f"Sensor '{sensor_id}' not found")
+    
+    if not row_model:
+        raise HTTPException(status_code=404, detail=f"Model '{model_name}' not found")
 
-    sensor_id = sensor_row[0]
+    model_id = row_model[0]
+    model_type = row_model[1]
 
-    ModelClass = MODEL_REGISTRY.get(model_type)
-    if not ModelClass:
-        raise HTTPException(status_code=400, detail=f"Unsupported model type '{model_type}'")
+    logger.info(f"Model ID for '{model_name}': {model_id}, Model Type: {model_type}")
 
-    model_instance = ModelClass(
-        sensor_id=sensor_id,
-        algorithm_name=algorithm_name,
-        sliding_window_size=sliding_window_size
-    )
+    if not sensor_id_list:
+        sensor_ids = db.execute(
+            text("SELECT sensor_id FROM model_sensor WHERE model_id = :model_id"),
+            {"model_id": model_id}
+        ).fetchall()
 
-    model_instance.data = []
-    sensor_data = db.execute(
-        text("""
-            SELECT timestamp_utc, value FROM sensor_measurement
-            WHERE sensor_id = :sensor_id
-            ORDER BY timestamp_utc ASC
-            LIMIT :limit
-        """),
-        {"sensor_id": sensor_id, "limit": sliding_window_size}
-    ).fetchall()
+        sensor_id_list = [row[0] for row in sensor_ids]
 
-    model_instance.data_ingestion(sensor_data)
-    results = model_instance.run()
+    logger.info(f"Sensor IDs associated with model '{model_name}': {sensor_id_list}")
+    results = {}
+    for sensor_id in sensor_id_list:
+        row_sensor = db.execute(
+            text("SELECT sensor_id FROM sensor WHERE sensor_id = :sensor_id"),
+            {"sensor_id": sensor_id}
+        ).fetchone()
+
+        if not row_sensor:
+            raise HTTPException(status_code=404, detail=f"Sensor '{sensor_id}' not found")
+
+        sensor_id = row_sensor[0]
+
+        ModelClass = MODEL_REGISTRY.get(model_type)
+        if not ModelClass:
+            raise HTTPException(status_code=400, detail=f"Unsupported model type '{model_type}'")
+
+        model_instance = ModelClass(
+            sensor_id=sensor_id,
+            conf=parameters
+        )
+
+        model_instance.data = []
+        sensor_data = db.execute(
+            text("""
+                SELECT timestamp_utc, value FROM sensor_measurement
+                WHERE sensor_id = :sensor_id
+                ORDER BY timestamp_utc ASC
+                LIMIT :limit
+            """),
+            {"sensor_id": sensor_id, "limit": sliding_window_size}
+        ).fetchall()
+
+        logger.info(f"Fetched {len(sensor_data)} measurements for sensor_id {sensor_id}")
+        model_instance.data_ingestion(sensor_data)
+        results[sensor_id] = model_instance.run()
+        logger.info(f"Model run completed for sensor_id {sensor_id}")
 
     return {"status": "model run completed", "results": results}

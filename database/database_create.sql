@@ -82,6 +82,7 @@ CREATE TABLE IF NOT EXISTS model (
     model_id SERIAL PRIMARY KEY,
     name VARCHAR(64) UNIQUE NOT NULL,
     description TEXT,
+    model_type VARCHAR(32) NOT NULL,
     parameters JSONB,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()

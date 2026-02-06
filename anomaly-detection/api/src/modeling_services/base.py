@@ -1,7 +1,7 @@
 class BaseModel:
-    def __init__(self, sensor_id, algorithm_name, sliding_window_size):
+    def __init__(self, sensor_id, conf, sliding_window_size):
         self.sensor_id = sensor_id
-        self.algorithm_name = algorithm_name
+        self.conf = conf
         self.sliding_window_size = sliding_window_size
         self.data = []
 

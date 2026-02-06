@@ -2,8 +2,8 @@ from .base import BaseModel
 from src.Test import Test
 
 class AnomalyDetectionModel(BaseModel):
-    def __init__(self, sensor_id, algorithm_name="border_check.json", sliding_window_size=100):
-        super().__init__(sensor_id, algorithm_name, sliding_window_size)
+    def __init__(self, sensor_id, conf, sliding_window_size=100):
+        super().__init__(sensor_id, conf, sliding_window_size)
 
     def data_ingestion(self, measurements):
         self.data = [
@@ -15,7 +15,7 @@ class AnomalyDetectionModel(BaseModel):
         ]
 
     def run(self):
-        self.detector = Test(configuration_location=self.algorithm_name)
+        self.detector = Test(conf=self.conf)
         self.result = self.detector.read_streaming_data(self.data)
         return self.result
 

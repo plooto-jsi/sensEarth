@@ -26,9 +26,6 @@ DATA_DIR = os.path.abspath("data")
 
 router = APIRouter()
 
-MODEL_REGISTRY = {
-    "anomaly_detection": AnomalyDetectionModel,
-}
 
 @router.post("/register")
 def register(payload: RegisterPayload, db: Session = Depends(get_db)) -> Dict[str, Dict[str, int]]:
@@ -83,11 +80,12 @@ def register_model(request: Dict, db: Session = Depends(get_db)):
     }
 
 @router.post("/runModel")
-async def run_model(payload: runModelPayload, db: Session = Depends(get_db)) -> Dict[str, Any]:
+async def run_model(payload: Dict, db: Session = Depends(get_db)) -> Dict[str, Any]:
     """
     Run specified model for a sensor with given configuration.
     Add new models to MODEL_REGISTRY.
     """
     logger.info(f"Run model endpoint called with payload: {payload}")
-
-    return await model_results(payload, MODEL_REGISTRY, db)
+    
+    results = await model_results(payload, MODEL_REGISTRY, db)
+    return results  

@@ -38,3 +38,30 @@ python -m uvicorn api.src.main:app --reload
   "sensor_id_list" : [1,2,3]
 }
 ```
+
+# RunModel enpoint example
+
+```
+
+{
+    "model_name": "border_check_AD",
+    "sliding_window_size" : "100",
+    "sensor_id_list" : [10, 20, 30] # Optional, adjust as needed
+    "parameters" : {
+    "anomaly_detection_alg": ["EMA()"],
+    "anomaly_detection_conf": [
+        {
+            "input_vector_size": 1,
+            "N": 3,
+            "LL": -0.45,
+            "UL": 0.55,
+            "warning_stages": [0.3, -0.2],
+            "output": ["TerminalOutput()"],
+            "output_conf": [{}]
+        }
+    ]
+}
+
+}
+
+```
