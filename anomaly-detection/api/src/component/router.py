@@ -88,4 +88,33 @@ async def run_model(payload: Dict, db: Session = Depends(get_db)) -> Dict[str, A
     logger.info(f"Run model endpoint called with payload: {payload}")
     
     results = await model_results(payload, MODEL_REGISTRY, db)
-    return results  
+    return results
+
+@router.get("/models")
+def list_models(db: Session = Depends(get_db)):
+    """
+    Display all registered models with their details.
+    """
+    return get_models(db)
+
+@router.get("/models/{model_name}")
+def list_model(model_name: str, db: Session = Depends(get_db)) -> Dict[str, Any]:
+    """
+    Display a specific registered model with its details.
+    """
+    return get_model(model_name, db)
+
+@router.delete("/models")
+def remove_models(db: Session = Depends(get_db)) -> Dict[str, Any]:
+    """
+    Remove all models from the database. This will delete all models and associated configurations and results.
+    """
+    return delete_models(db)
+
+@router.delete("/models/{model_name}")
+def remove_model(model_name: str, db: Session = Depends(get_db)) -> Dict[str, Any]:
+    """
+    Remove model by name. This will delete the model and all associated configurations and results.
+    """
+
+    return delete_model(model_name, db)

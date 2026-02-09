@@ -21,6 +21,7 @@ python -m uvicorn api.src.main:app --reload
 {
   "model_name": "border_check_AD",
   "model_description": "Detects anomalies in sensor data",
+  "model_type" : "anomaly_detection",
   "model_parameters": {
     "anomaly_detection_alg": ["BorderCheck()"],
     
@@ -41,12 +42,14 @@ python -m uvicorn api.src.main:app --reload
 
 # RunModel enpoint example
 
+Parameter sensor_id_list is optional, if not provided, all sensors for specific model will be included
+
 ```
 
 {
     "model_name": "border_check_AD",
     "sliding_window_size" : "100",
-    "sensor_id_list" : [10, 20, 30] # Optional, adjust as needed
+    "sensor_id_list" : [10, 20, 30], 
     "parameters" : {
     "anomaly_detection_alg": ["EMA()"],
     "anomaly_detection_conf": [

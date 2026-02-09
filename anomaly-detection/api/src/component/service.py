@@ -250,6 +250,7 @@ def create_model(request: Dict, db: Session = Depends(get_db)):
     model_description = request.get("model_description")
     model_parameters = request.get("model_parameters", {})
     sensor_id_list = request.get("sensor_id_list", [])
+    model_type = request.get("model_type", "anomaly_detection")
 
     if not model_name or model_name == "":
         logger.warning("Model name is required")
@@ -258,8 +259,8 @@ def create_model(request: Dict, db: Session = Depends(get_db)):
     try:
         # Create model
         q_model = text("""
-            INSERT INTO model (name, description, parameters)
-            VALUES (:name, :description, :parameters)
+            INSERT INTO model (name, description, model_type, parameters)
+            VALUES (:name, :description, :model_type, :parameters)
             RETURNING model_id
         """)
 
@@ -268,6 +269,7 @@ def create_model(request: Dict, db: Session = Depends(get_db)):
             {
                 "name": model_name,
                 "description": model_description,
+                "model_type": model_type,
                 "parameters": Json(model_parameters)
             }
         ).scalar_one()
@@ -307,8 +309,7 @@ def create_model(request: Dict, db: Session = Depends(get_db)):
 
 async def model_results(payload: Dict, MODEL_REGISTRY: Dict[str, Any], db: Session = Depends(get_db)) -> Dict[str, Any]:
     """
-    Run specified model for a sensor with given configuration.
-    Add new models to MODEL_REGISTRY.
+    Run specified model for a sensor with its configuration.
     Model name is UNIQUE so we can identify models by name.
     """
 
@@ -333,6 +334,11 @@ async def model_results(payload: Dict, MODEL_REGISTRY: Dict[str, Any], db: Sessi
     model_id = row_model[0]
     model_type = row_model[1]
 
+    ModelClass = MODEL_REGISTRY.get(model_type)
+    if not ModelClass:
+        raise HTTPException(status_code=400, detail=f"Unsupported model type '{model_type}'")
+
+
     logger.info(f"Model ID for '{model_name}': {model_id}, Model Type: {model_type}")
 
     if not sensor_id_list:
@@ -341,7 +347,7 @@ async def model_results(payload: Dict, MODEL_REGISTRY: Dict[str, Any], db: Sessi
             {"model_id": model_id}
         ).fetchall()
 
-        sensor_id_list = [row[0] for row in sensor_ids]
+        sensor_id_list = set([row[0] for row in sensor_ids])
 
     logger.info(f"Sensor IDs associated with model '{model_name}': {sensor_id_list}")
     results = {}
@@ -356,10 +362,7 @@ async def model_results(payload: Dict, MODEL_REGISTRY: Dict[str, Any], db: Sessi
 
         sensor_id = row_sensor[0]
 
-        ModelClass = MODEL_REGISTRY.get(model_type)
-        if not ModelClass:
-            raise HTTPException(status_code=400, detail=f"Unsupported model type '{model_type}'")
-
+        
         model_instance = ModelClass(
             sensor_id=sensor_id,
             conf=parameters
@@ -382,3 +385,78 @@ async def model_results(payload: Dict, MODEL_REGISTRY: Dict[str, Any], db: Sessi
         logger.info(f"Model run completed for sensor_id {sensor_id}")
 
     return {"status": "model run completed", "results": results}
+
+def get_models(db: Session):
+    """
+    Display all registered models with their details.
+    """
+    rows = db.execute(
+        text("SELECT model_id, name, description, model_type FROM model")
+    ).fetchall()
+
+    if not rows:
+        logger.info("No models found in database")
+
+    return rows_to_dict(rows)
+    
+    
+def get_model(model_name: str, db: Session):
+    """
+    Display specific model information by name.
+    """
+    try:
+        row = db.execute(
+            text("SELECT model_id, name, description, model_type, parameters FROM model WHERE name = :model_name"),
+            {"model_name": model_name}
+        ).fetchone()
+
+        if not row:
+            logger.warning(f"Model '{model_name}' not found in database")
+            raise HTTPException(status_code=404, detail=f"Model '{model_name}' not found)")
+    except Exception as e:
+        logger.error("Error fetching model", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to fetch model")
+
+    return row_to_dict(row)
+
+def delete_models(db: Session) -> None:
+    """
+    Deletes all models from the database. This will delete all models and associated configurations and results.
+    """
+    try: 
+        q_delete_all = text("DELETE FROM model")
+        db.execute(q_delete_all)
+        db.commit()
+        logger.info("All models removed successfully")
+    except Exception as e:
+        db.rollback()
+        logger.error("Error removing all models", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to remove all models")
+    
+    return {"status": "ok", "message": "All models removed successfully"}
+
+
+
+def delete_model(model_name: str, db: Session):
+    """
+    Removes specific model
+    """
+    try:
+        q_delete = text("""
+            DELETE FROM model
+            WHERE name = :model_name
+            RETURNING model_id
+        """)
+        result = db.execute(q_delete, {"model_name": model_name})
+        deleted_model_id = result.scalar_one_or_none()
+
+        if deleted_model_id is None:
+            raise HTTPException(status_code=404, detail=f"Model '{model_name}' not found")
+
+        db.commit()
+        logger.info(f"Model '{model_name}' with id {deleted_model_id} removed successfully")
+        return {"status": "ok", "message": f"Model '{model_name}' removed successfully"}
+    except Exception as e:
+        db.rollback()
+        logger.error("Error removing model", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to remove model")
