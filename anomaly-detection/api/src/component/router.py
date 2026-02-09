@@ -44,7 +44,7 @@ def register(payload: RegisterPayload, db: Session = Depends(get_db)) -> Dict[st
         logger.warning("Empty payload received in register endpoint")
         raise HTTPException(status_code=400, detail="Empty payload")
 
-    return register_enteties(payload, db)
+    return register_entities(payload, db)
 
 
 @router.post("/dataIngest")
@@ -63,21 +63,19 @@ def data_ingest(payload: List[MeasurementPayload], db: Session = Depends(get_db)
 
     return ingest_measurements(payload, db)
 
-@router.post("/RegisterModel")
+@router.post("/registerModel")
 def register_model(request: Dict, db: Session = Depends(get_db)):
     """
     Register a new model based on the request payload.
     Parameters:
     """
+    logger.info(f"Register model endpoint called with request: {request}")
 
     if not request:
         logger.warning("Empty request received in register model endpoint")
         raise HTTPException(status_code=400, detail="Empty request")
 
-    model = create_model(request, db)
-    return {
-        "model": model
-    }
+    return create_model(request, db)
 
 @router.post("/runModel")
 async def run_model(payload: Dict, db: Session = Depends(get_db)) -> Dict[str, Any]:
@@ -87,8 +85,11 @@ async def run_model(payload: Dict, db: Session = Depends(get_db)) -> Dict[str, A
     """
     logger.info(f"Run model endpoint called with payload: {payload}")
     
-    results = await model_results(payload, MODEL_REGISTRY, db)
-    return results
+    if not payload:
+        logger.warning("Empty payload received in run model endpoint")
+        raise HTTPException(status_code=400, detail="Empty payload")
+
+    return await model_results(payload, MODEL_REGISTRY, db)
 
 @router.get("/models")
 def list_models(db: Session = Depends(get_db)):
@@ -107,14 +108,13 @@ def list_model(model_name: str, db: Session = Depends(get_db)) -> Dict[str, Any]
 @router.delete("/models")
 def remove_models(db: Session = Depends(get_db)) -> Dict[str, Any]:
     """
-    Remove all models from the database. This will delete all models and associated configurations and results.
+    Delete all models from the database. This will delete all models and associated configurations and results.
     """
     return delete_models(db)
 
 @router.delete("/models/{model_name}")
 def remove_model(model_name: str, db: Session = Depends(get_db)) -> Dict[str, Any]:
     """
-    Remove model by name. This will delete the model and all associated configurations and results.
+    Delete model by name. This will delete the model and all associated configurations and results.
     """
-
     return delete_model(model_name, db)

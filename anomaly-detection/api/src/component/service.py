@@ -25,7 +25,6 @@ from .models import *
 from .schemas import *
 from .exceptions import *
 from .utils import *
-from .service import *
 from ..logger import logger
 
 
@@ -36,7 +35,7 @@ MODEL_REGISTRY = {
 CONFIG_DIR = os.path.abspath("configuration")
 DATA_DIR = os.path.abspath("data")
 
-def register_enteties(payload: RegisterPayload, db: Session = Depends(get_db)) -> Dict[str, Dict[str, int]]:
+def register_entities(payload: RegisterPayload, db: Session) -> Dict[str, Dict[str, int]]:
     """
     Registers nodes and sensors from the payload.
     Returns:
@@ -84,7 +83,7 @@ def register_enteties(payload: RegisterPayload, db: Session = Depends(get_db)) -
         except Exception:
             raise HTTPException(
                 status_code=409,
-                detail=f"Node conflict: node_hash '{node_hash}' already exists"
+                detail=f"Node conflict: node_hash: '{node_hash}' already exists"
             )
 
         node_map[node_hash] = node_id
@@ -176,7 +175,7 @@ def register_enteties(payload: RegisterPayload, db: Session = Depends(get_db)) -
     return {"nodes": node_map, "sensors": sensor_map}
 
 
-def ingest_measurements(payload: dataIngestPayload, db: Session = Depends(get_db)) -> Dict[str, Any]:
+def ingest_measurements(payload: dataIngestPayload, db: Session) -> Dict[str, Any]:
     measurement_buffer = []
 
     sensor_hashes = [
@@ -207,7 +206,7 @@ def ingest_measurements(payload: dataIngestPayload, db: Session = Depends(get_db
             val = float(value)
             measurement_buffer.append((sensor_id_db, ts, val))
         except (TypeError, ValueError):
-                print(f"Skipping invalid measurement: {measurement}")
+                logger.warning(f"Skipping invalid measurement: {measurement}")
                 continue
 
     if measurement_buffer:
@@ -231,7 +230,7 @@ def ingest_measurements(payload: dataIngestPayload, db: Session = Depends(get_db
 
     return {"status": "ok", "inserted_measurements": len(payload)}
 
-def create_model(request: Dict, db: Session = Depends(get_db)):
+def create_model(request: Dict, db: Session):
     """
     Create a new model and optionally associate it with a sensor.
 
@@ -264,7 +263,7 @@ def create_model(request: Dict, db: Session = Depends(get_db)):
             RETURNING model_id
         """)
 
-        model_id = db.execute(
+        row = db.execute(
             q_model,
             {
                 "name": model_name,
@@ -272,10 +271,12 @@ def create_model(request: Dict, db: Session = Depends(get_db)):
                 "model_type": model_type,
                 "parameters": Json(model_parameters)
             }
-        ).scalar_one()
-        logger.info(f"Model '{model_name}' created with id {model_id}")
+        ).fetchone()
+        model_dict = row_to_dict(row)
+        logger.info(f"Model '{model_name}' created model {model_dict}")
 
         # Optionally associate sensor
+        associated_sensors = []
 
         for sensor_id in set(sensor_id_list):
             if sensor_id is not None:
@@ -288,26 +289,28 @@ def create_model(request: Dict, db: Session = Depends(get_db)):
                     ON CONFLICT DO NOTHING
                 """)
 
-                result = db.execute(
+                row_sensor = db.execute(
                     q_link,
-                    {"model_id": model_id, "sensor_id": sensor_id}
+                    {"model_id": model_dict["model_id"], "sensor_id": sensor_id}
                 )
 
-                if result.rowcount == 0:
+                associated_sensors.append(row_sensor)
+
+                if row_sensor.rowcount == 0:
                     logger.warning(
                         f"Sensor ID {sensor_id} not found. Model created without association."
                     )
 
         db.commit()
+        model_dict["associated_sensors"] = len(associated_sensors)
+        return model_dict
     except Exception as e:
         db.rollback()
         logger.error("Error creating model", exc_info=True)
         raise HTTPException(status_code=500, detail="Failed to create model")
 
-    return {"model_id": model_id}
 
-
-async def model_results(payload: Dict, MODEL_REGISTRY: Dict[str, Any], db: Session = Depends(get_db)) -> Dict[str, Any]:
+async def model_results(payload: Dict, MODEL_REGISTRY: Dict[str, Any], db: Session) -> Dict[str, Any]:
     """
     Run specified model for a sensor with its configuration.
     Model name is UNIQUE so we can identify models by name.
@@ -362,7 +365,6 @@ async def model_results(payload: Dict, MODEL_REGISTRY: Dict[str, Any], db: Sessi
 
         sensor_id = row_sensor[0]
 
-        
         model_instance = ModelClass(
             sensor_id=sensor_id,
             conf=parameters
@@ -388,7 +390,7 @@ async def model_results(payload: Dict, MODEL_REGISTRY: Dict[str, Any], db: Sessi
 
 def get_models(db: Session):
     """
-    Display all registered models with their details.
+    Fetch all registered models with their details.
     """
     rows = db.execute(
         text("SELECT model_id, name, description, model_type FROM model")
@@ -399,10 +401,9 @@ def get_models(db: Session):
 
     return rows_to_dict(rows)
     
-    
 def get_model(model_name: str, db: Session):
     """
-    Display specific model information by name.
+    Fetch specific model information by name.
     """
     try:
         row = db.execute(
@@ -412,7 +413,7 @@ def get_model(model_name: str, db: Session):
 
         if not row:
             logger.warning(f"Model '{model_name}' not found in database")
-            raise HTTPException(status_code=404, detail=f"Model '{model_name}' not found)")
+            raise HTTPException(status_code=404, detail=f"Model '{model_name}' not found")
     except Exception as e:
         logger.error("Error fetching model", exc_info=True)
         raise HTTPException(status_code=500, detail="Failed to fetch model")
@@ -435,11 +436,9 @@ def delete_models(db: Session) -> None:
     
     return {"status": "ok", "message": "All models removed successfully"}
 
-
-
 def delete_model(model_name: str, db: Session):
     """
-    Removes specific model
+    Deletes specific model. This will delete the model and all associated configurations and results.
     """
     try:
         q_delete = text("""

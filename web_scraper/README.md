@@ -69,7 +69,7 @@ Each config file should look like this:
 }
 ```
 
-Move to `cd scraper`
+Move to `cd web_scraper`
 
 ## Run Minio 
 
@@ -86,6 +86,10 @@ All commands are run from the project root: `python web_scraper.scraper.py [OPTI
 Run every scraper from configs `python scraper.py --config`
 
 Run only specific configs `python scraper.py --config conf1 conf2`
+
+cd web_scraper
+conda activate web_scraper_env
+python scraper.py --config
 
 ## Directory structure
 ```
