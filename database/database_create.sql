@@ -75,7 +75,31 @@ SELECT create_hypertable(
 );
 
 -- ===============================
+-- 7. Models
+-- ===============================
+
+CREATE TABLE IF NOT EXISTS model (
+    model_id SERIAL PRIMARY KEY,
+    name VARCHAR(64) UNIQUE NOT NULL,
+    description TEXT,
+    model_type VARCHAR(32) NOT NULL,
+    parameters JSONB,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE model_sensor (
+    model_id INT NOT NULL REFERENCES model(model_id) ON DELETE CASCADE,
+    sensor_id INT NOT NULL REFERENCES sensor(sensor_id) ON DELETE CASCADE,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    PRIMARY KEY (model_id, sensor_id)
+);
+
+-- ===============================
 -- Foreign key relationships:
 -- sensor_type 1—n sensor
 -- sensor_node 1—n sensor
 -- sensor 1—n sensor_measurement
+-- sensor 1—n sensor_measurement
+-- model 1—n model_sensor
+-- sensor 1—n model_sensor

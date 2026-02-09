@@ -38,3 +38,9 @@ class MeasurementPayload(BaseModel):
 
 class dataIngestPayload(BaseModel):
     measurements: List[MeasurementPayload]
+
+class runModelPayload(BaseModel):
+    sensor_id: str
+    algorithm_name: str
+    model_type: str
+    sliding_window_size: Optional[int] = 100

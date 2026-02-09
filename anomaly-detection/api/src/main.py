@@ -12,7 +12,6 @@ from datetime import *
 import traceback
 from .component.exceptions import create_exception_handlers
 
-
 app = FastAPI()
 
 app.add_middleware(

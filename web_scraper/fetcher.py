@@ -1,5 +1,5 @@
 import requests
-from storage_pipeline import store_raw_response 
+#from storage_pipeline import store_raw_response 
 
 class Fetcher:
     """Basic fetcher using requests."""
