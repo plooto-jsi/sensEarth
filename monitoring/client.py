@@ -8,25 +8,65 @@ def _send(path, payload):
     except:
         pass 
 
-def emit_heartbeat(component, instance_id=None):
-    threading.Thread(target=_send, args=(
-        "/heartbeat",
-        {"component": component, "instance_id": instance_id}
-    )).start()
+def emit_heartbeat(name: str, instance_id: str, status: str = "OK", metadata: dict | None = None,):
+    threading.Thread(
+        target=_send,
+        args=(
+            "/heartbeat",
+            {
+                "name": name,
+                "instance_id": instance_id,
+                "status": status,
+                "metadata": metadata or {},
+            },
+        ),
+        daemon=True,
+    ).start()
 
-def emit_event(component, name, status, metadata=None):
-    threading.Thread(target=_send, args=(
-        "/event",
-        {
-            "component": component,
-            "event": name,
-            "status": status,
-            "metadata": metadata or {}
-        }
-    )).start()
+def emit_event(name: str, instance_id: str, event_type: str, severity: str = "INFO", message: str | None = None, metadata: dict | None = None,):
+    threading.Thread(
+        target=_send,
+        args=(
+            "/event",
+            {
+                "name": name,
+                "instance_id": instance_id,
+                "event_type": event_type,
+                "severity": severity,
+                "message": message,
+                "metadata": metadata or {},
+            },
+        ),
+        daemon=True,
+    ).start()
 
-def emit_metric(component, name, value):
-    threading.Thread(target=_send, args=(
-        "/metric",
-        {"component": component, "metric": name, "value": value}
-    )).start()
+def emit_metric(name: str, instance_id: str, metric_name: str, value: float, unit: str | None = None, metadata: dict | None = None,):
+    threading.Thread(
+        target=_send,
+        args=(
+            "/metric",
+            {
+                "name": name,
+                "instance_id": instance_id,
+                "metric_name": metric_name,
+                "value": value,
+                "unit": unit,
+                "metadata": metadata or {},
+            },
+        ),
+        daemon=True,
+    ).start()
+
+def emit_component_registration(name: str, instance_id: str, component_type: str = "other",):
+    threading.Thread(
+        target=_send,
+        args=(
+            "/component",
+            {
+                "name": name,
+                "instance_id": instance_id,
+                "type": component_type,
+            },
+        ),
+        daemon=True,
+    ).start()
