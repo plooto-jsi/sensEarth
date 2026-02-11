@@ -27,6 +27,8 @@ from .exceptions import *
 from .utils import *
 from ..logger import logger
 
+from monitoring.client import emit_component_registration, emit_event, emit_metric, emit_heartbeat
+
 
 MODEL_REGISTRY = {
     "anomaly_detection": AnomalyDetectionModel,
@@ -44,6 +46,23 @@ def register_entities(payload: RegisterPayload, db: Session) -> Dict[str, Dict[s
         "sensors": {sensor_hash: sensor_id, ...}
     }
     """
+
+    emit_heartbeat(
+        name="middleware",
+        instance_id="default",
+        status="OK"
+    )
+
+    emit_event(
+        name="middleware",
+        instance_id="default",
+        event_type="registering_entities",
+        severity="INFO",
+        message="Register endpoint called",
+        metadata={"payload_size": len(payload.nodes) + len(payload.sensors)},
+    )
+    logger.info(f"Register endpoint called with payload: {payload}")
+
     node_map = {}          
     sensor_map = {}        
 
@@ -80,7 +99,26 @@ def register_entities(payload: RegisterPayload, db: Session) -> Dict[str, Dict[s
                 }
             ).fetchone()[0]
 
+            emit_event(
+                name="middleware",
+                instance_id="default",
+                event_type="register_node_success",
+                severity="INFO",
+                message=f"Successfully registered node with hash: {node_hash}",
+                metadata={"node_hash": node_hash}
+            )
+
         except Exception:
+
+            emit_event(
+                name="middleware",
+                instance_id="default",
+                event_type="register_node_failed",
+                severity="ERROR",
+                message=str(e),
+                metadata={"node_hash": node_data.node_hash}
+            )
+
             raise HTTPException(
                 status_code=409,
                 detail=f"Node conflict: node_hash: '{node_hash}' already exists"
@@ -163,7 +201,25 @@ def register_entities(payload: RegisterPayload, db: Session) -> Dict[str, Dict[s
                 }
             ).fetchone()[0]
 
+            emit_event(
+                name="middleware",
+                instance_id="default",
+                event_type="register_sensor_success",
+                severity="INFO",
+                message=f"Sensor {sensor_data.sensor_label} registered",
+                metadata={"sensor_hash": sensor_data.sensor_hash, "node_hash": sensor_data.node_hash}
+            )
+
         except Exception:
+            emit_event(
+                name="middleware",
+                instance_id="default",
+                event_type="register_sensor_failed",
+                severity="ERROR",
+                message=str(e),
+                metadata={"sensor_hash": sensor_data.sensor_hash}
+            )
+
             raise HTTPException(
                 status_code=409,
                 detail=f"Sensor conflict: sensor_hash '{sensor_hash}' already exists"
@@ -171,11 +227,34 @@ def register_entities(payload: RegisterPayload, db: Session) -> Dict[str, Dict[s
 
         sensor_map[sensor_hash] = sensor_id
 
+    emit_metric(
+    name="middleware",
+    instance_id="default",
+    metric_name="registered_nodes",
+    value=len(node_map),
+    unit="count"
+    )
+
+    emit_metric(
+        name="middleware",
+        instance_id="default",
+        metric_name="registered_sensors",
+        value=len(sensor_map),
+        unit="count"
+    )
+
     db.commit()
     return {"nodes": node_map, "sensors": sensor_map}
 
 
 def ingest_measurements(payload: dataIngestPayload, db: Session) -> Dict[str, Any]:
+
+    emit_heartbeat(
+        name="middleware",
+        instance_id="default",
+        status="OK"
+    )
+
     measurement_buffer = []
 
     sensor_hashes = [
@@ -209,7 +288,7 @@ def ingest_measurements(payload: dataIngestPayload, db: Session) -> Dict[str, An
                 logger.warning(f"Skipping invalid measurement: {measurement}")
                 continue
 
-    if measurement_buffer:
+    if measurement_buffer:  
         conn = db.get_bind().raw_connection()  # get psycopg2 connection
         try:
             with conn.cursor() as cur:
@@ -228,7 +307,24 @@ def ingest_measurements(payload: dataIngestPayload, db: Session) -> Dict[str, An
             conn.close()
     db.commit()
 
-    return {"status": "ok", "inserted_measurements": len(payload)}
+    # TODO: check lenght of buffer
+    emit_metric(
+        name="middleware",
+        instance_id="default",
+        metric_name="measurements_ingested",
+        value=len(measurement_buffer) if measurement_buffer else 0,
+        unit="count"
+    )
+
+    emit_event(
+        name="middleware",
+        instance_id="default",
+        event_type="data_ingest_completed",
+        severity="INFO",
+        message=f"Inserted {len(measurement_buffer)} measurements",
+    )
+
+    return {"status": "ok", "inserted_measurements": len(measurement_buffer)}
 
 def create_model(request: Dict, db: Session):
     """
@@ -245,6 +341,16 @@ def create_model(request: Dict, db: Session):
         "model_id": int
     }
     """
+
+    emit_event(
+        name="middleware",
+        instance_id="default",
+        event_type="registering_model",
+        severity="INFO",
+        message="Register model endpoint called",
+        metadata={"model_name": request.get("model_name")}  
+    )
+
     model_name = request.get("model_name")
     model_description = request.get("model_description")
     model_parameters = request.get("model_parameters", {})
@@ -303,8 +409,35 @@ def create_model(request: Dict, db: Session):
 
         db.commit()
         model_dict["associated_sensors"] = len(associated_sensors)
+
+        emit_event(
+            name="middleware",
+            instance_id="default",
+            event_type="model_registration_success",
+            severity="INFO",
+            message=f"Model '{model_name}' registered successfully",
+            metadata={"model_id": model_dict["model_id"], "associated_sensors": len(associated_sensors)}
+        )
+
+        emit_metric(
+            name="middleware",
+            instance_id="default",
+            metric_name="registered_models",
+            value=1,
+            unit="count"
+        )
+
         return model_dict
     except Exception as e:
+        emit_event(
+            name="middleware",
+            instance_id="default",
+            event_type="model_registration_failed",
+            severity="ERROR",
+            message=f"Failed to register model '{model_name}'",
+            metadata={"error": str(e)}
+        )
+
         db.rollback()
         logger.error("Error creating model", exc_info=True)
         raise HTTPException(status_code=500, detail="Failed to create model")
@@ -315,6 +448,20 @@ async def model_results(payload: Dict, MODEL_REGISTRY: Dict[str, Any], db: Sessi
     Run specified model for a sensor with its configuration.
     Model name is UNIQUE so we can identify models by name.
     """
+
+    emit_heartbeat(
+        name="middleware",
+        status="OK"
+    )
+
+    emit_event(
+        name="middleware",
+        instance_id="default",
+        event_type="model_run_started",
+        severity="INFO",
+        message="Run model endpoint called",
+        metadata={"model_name": payload.get("model_name")}
+    )
 
     model_name = payload.get("model_name")
     sensor_id_list = set(payload.get("sensor_id_list", []))
@@ -385,6 +532,15 @@ async def model_results(payload: Dict, MODEL_REGISTRY: Dict[str, Any], db: Sessi
         model_instance.data_ingestion(sensor_data)
         results[sensor_id] = model_instance.run()
         logger.info(f"Model run completed for sensor_id {sensor_id}")
+
+    emit_event(
+        name="middleware",
+        instance_id="default",
+        event_type="model_run_completed",
+        severity="INFO",
+        message="Model run completed for all sensors",
+        metadata={"model_name": payload.get("model_name"), "sensor_count": len(sensor_id_list)}
+    )
 
     return {"status": "model run completed", "results": results}
 

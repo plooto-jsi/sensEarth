@@ -2,6 +2,8 @@ import os
 from typing import Dict, Any, List
 from datetime import datetime
 
+from importlib_metadata import metadata
+
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi import Request, UploadFile, File, Form, Query
 from fastapi.responses import JSONResponse
@@ -38,7 +40,7 @@ def register(payload: RegisterPayload, db: Session = Depends(get_db)) -> Dict[st
         "sensors": {sensor_hash: sensor_id, ...}
     }
     """
-    logger.info(f"Register endpoint called with payload: {payload}")
+    
 
     if not payload:
         logger.warning("Empty payload received in register endpoint")

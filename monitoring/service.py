@@ -1,7 +1,7 @@
 from .logger import logger
 from sqlalchemy.orm import Session
 from sqlalchemy import text
-
+from psycopg2.extras import Json
 
 component_id_cache: dict[tuple[str, str], int] = {}
 
@@ -83,7 +83,7 @@ def save_event(payload: dict, db: Session):
         "event_type": payload["event_type"],
         "severity": payload.get("severity", "INFO"),
         "message": payload.get("message"),
-        "metadata": payload.get("metadata"),
+        "metadata": Json(payload.get("metadata") or {})
     })
     db.commit()
 
@@ -108,8 +108,8 @@ def save_metric(payload: dict, db: Session):
         "component_id": component_id,
         "metric_name": payload["metric_name"],
         "value": payload["value"],
-        "unit": payload.get("unit"),
-        "metadata": payload.get("metadata"),
+        "unit": payload.get("unit"),    
+        "metadata": Json(payload.get("metadata") or {})
     })
     db.commit()
 
@@ -133,7 +133,7 @@ def save_heartbeat(payload: dict, db: Session):
     result = db.execute(sql, {
         "component_id": component_id,
         "status": payload.get("status", "OK"),
-        "metadata": payload.get("metadata"),
+        "metadata": Json(payload.get("metadata") or {})
     })
     db.commit()
 

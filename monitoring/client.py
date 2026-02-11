@@ -1,14 +1,19 @@
+from psycopg2.extras import Json
 import requests, threading
+from typing import Optional
 
-WATCHDOG_URL = "http://watchdog-api:8001"
+
+WATCHDOG_URL = "http://localhost:8001"
 
 def _send(path, payload):
     try:
-        requests.post(f"{WATCHDOG_URL}{path}", json=payload, timeout=0.05)
-    except:
-        pass 
+        resp = requests.post(f"{WATCHDOG_URL}{path}", json=payload, timeout=5)
+        print(f"[WatchDog client] Sent {path}, status: {resp.status_code}, response: {resp.text}")
+    except Exception as e:
+        print(f"[WatchDog client] Failed to send {path}: {e}")
 
-def emit_heartbeat(name: str, instance_id: str, status: str = "OK", metadata: dict | None = None,):
+
+def emit_heartbeat( name: str, instance_id: str, status: str = "OK", metadata: Optional[dict] = None):
     threading.Thread(
         target=_send,
         args=(
@@ -22,8 +27,8 @@ def emit_heartbeat(name: str, instance_id: str, status: str = "OK", metadata: di
         ),
         daemon=True,
     ).start()
-
-def emit_event(name: str, instance_id: str, event_type: str, severity: str = "INFO", message: str | None = None, metadata: dict | None = None,):
+    
+def emit_event(name: str, instance_id: str, event_type: str, severity: str = "INFO", message: Optional[str] = None, metadata: Optional[dict] = None):
     threading.Thread(
         target=_send,
         args=(
@@ -40,7 +45,7 @@ def emit_event(name: str, instance_id: str, event_type: str, severity: str = "IN
         daemon=True,
     ).start()
 
-def emit_metric(name: str, instance_id: str, metric_name: str, value: float, unit: str | None = None, metadata: dict | None = None,):
+def emit_metric(name: str, instance_id: str, metric_name: str, value: float, unit: Optional[str] = None, metadata: Optional[dict] = None):
     threading.Thread(
         target=_send,
         args=(

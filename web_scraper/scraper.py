@@ -13,7 +13,6 @@ from extractors.xml_extractor import XMLExtractor
 # from extractors.csv_extractor import CSVExtractor
 # from extractors.html_extractor import HTMLExtractor
 
-from monitoring.client import emit_event, emit_metric, emit_heartbeat
 
 EXTRACTOR_MAP = {
     "xml": XMLExtractor,
