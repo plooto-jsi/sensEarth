@@ -3,7 +3,7 @@ import requests, threading
 from typing import Optional
 
 
-WATCHDOG_URL = "http://localhost:8001"
+WATCHDOG_URL = "http://watchdog-api:8001"
 
 def _send(path, payload):
     try:

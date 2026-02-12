@@ -1,4 +1,4 @@
-from .database_monitoring.database import get_db
+from database_monitoring.database import get_db
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 from fastapi import Depends, FastAPI

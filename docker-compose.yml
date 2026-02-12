@@ -3,7 +3,7 @@ version: '3.9'
 # Core sensearth Database Service
 services:
   timescaledb:
-    container_name: timescaledb
+    container_name: timescaledb1
     image: timescale/timescaledb-ha:pg14-latest
     environment:
       POSTGRES_USER: postgres
@@ -17,7 +17,7 @@ services:
 
 # Monitoring Database Service
   watchdog-db:
-    container_name: watchdog-db
+    container_name: watchdog-db1
     image: timescale/timescaledb-ha:pg14-latest
     environment:
       POSTGRES_USER: postgres
@@ -31,24 +31,19 @@ services:
 
 # Monitoring API Service
   watchdog-api:
-    image: python:3.8.20
-    container_name: watchdog-api
-    working_dir: /app
-    volumes:
-      - ./watchdog:/app
-    command: >
-      uvicorn monitoring.api:app
-      --host 0.0.0.0
-      --port 8001
-      --reload
-    ports:
-      - "8001:8001"
-    depends_on:
-      - watchdog-db
-    restart: always
+      container_name: watchdog-api
+      build:
+        context: ./monitoring
+        dockerfile: Dockerfile
+      working_dir: /app
+      ports:
+        - "8001:8001"
+      depends_on:
+        - watchdog-db
+      restart: always
 
   pgadmin:
-    container_name: pgadmin
+    container_name: pgadmin1
     image: dpage/pgadmin4
     environment:
       PGADMIN_DEFAULT_EMAIL: admin@example.com

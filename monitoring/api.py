@@ -1,12 +1,11 @@
 from fastapi import FastAPI
 from datetime import datetime
-from .database_monitoring.database import get_db
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 from fastapi import Depends, FastAPI
-from .service import save_component, save_event, save_metric, save_heartbeat
-from .logger import logger  
-from .database_monitoring.database import get_db 
+from service import save_component, save_event, save_metric, save_heartbeat
+from logger import logger  
+from database_monitoring.database import get_db 
 
 app = FastAPI(title="WatchDog")
 

@@ -1,4 +1,4 @@
-from .logger import logger
+from logger import logger
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 from psycopg2.extras import Json

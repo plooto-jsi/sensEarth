@@ -14,7 +14,7 @@ CREATE TABLE components (
     instance_id TEXT NOT NULL,
     type component_type NOT NULL,
     status component_status DEFAULT 'active',
-    created_at TIMESTAMP DEFAULT NOW()
+    created_at TIMESTAMP DEFAULT NOW(),
     CONSTRAINT unique_component UNIQUE (name, instance_id)
 );
 
