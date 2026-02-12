@@ -47,11 +47,7 @@ def register_entities(payload: RegisterPayload, db: Session) -> Dict[str, Dict[s
     }
     """
 
-    emit_heartbeat(
-        name="middleware",
-        instance_id="default",
-        status="OK"
-    )
+    emit_heartbeat(name="middleware", instance_id="default", status="OK")
 
     emit_event(
         name="middleware",
@@ -249,11 +245,7 @@ def register_entities(payload: RegisterPayload, db: Session) -> Dict[str, Dict[s
 
 def ingest_measurements(payload: dataIngestPayload, db: Session) -> Dict[str, Any]:
 
-    emit_heartbeat(
-        name="middleware",
-        instance_id="default",
-        status="OK"
-    )
+    emit_heartbeat(name="middleware", instance_id="default", status="OK")
 
     measurement_buffer = []
 
@@ -449,10 +441,7 @@ async def model_results(payload: Dict, MODEL_REGISTRY: Dict[str, Any], db: Sessi
     Model name is UNIQUE so we can identify models by name.
     """
 
-    emit_heartbeat(
-        name="middleware",
-        status="OK"
-    )
+    emit_heartbeat(name="middleware", instance_id="default", status="OK")
 
     emit_event(
         name="middleware",

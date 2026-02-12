@@ -3,7 +3,7 @@ import requests, threading
 from typing import Optional
 
 
-WATCHDOG_URL = "http://watchdog-api:8001"
+WATCHDOG_URL = "http://localhost:8001"
 
 def _send(path, payload):
     try:
@@ -11,7 +11,6 @@ def _send(path, payload):
         print(f"[WatchDog client] Sent {path}, status: {resp.status_code}, response: {resp.text}")
     except Exception as e:
         print(f"[WatchDog client] Failed to send {path}: {e}")
-
 
 def emit_heartbeat( name: str, instance_id: str, status: str = "OK", metadata: Optional[dict] = None):
     threading.Thread(

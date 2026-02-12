@@ -34,19 +34,12 @@ def startup_event():
     logger.info("Starting up the Anomaly Detection API...")
 
     try:
-        logger.info("Emitting component registration to monitoring system")
-        emit_component_registration(
-            name="middleware",
-            instance_id="default",
-            component_type="middleware",
-        )
-        logger.info( "Emitting initial heartbeat to monitoring system")
-        emit_heartbeat(
-        name="middleware",
-        instance_id="default",
-        status="OK"
-    )
-        logger.info("Component registration sent to monitoring system")
+        logger.debug("Emitting component registration to monitoring system")
+        emit_component_registration(name="middleware", instance_id="default", component_type="middleware",)
+        logger.debug("Component registration sent to monitoring system")
+
+        logger.debug( "Emitting initial heartbeat to monitoring system")
+        emit_heartbeat(name="middleware", instance_id="default", status="OK")
     except Exception as e:
         logger.warning(f"Error during component registration: {e}")
 
