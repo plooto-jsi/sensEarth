@@ -2,8 +2,8 @@ version: '3.9'
 
 # Core sensearth Database Service
 services:
-  timescaledb:
-    container_name: timescaledb1
+  sensearth-db:
+    container_name: sensearth-db
     image: timescale/timescaledb-ha:pg14-latest
     environment:
       POSTGRES_USER: postgres
@@ -12,12 +12,12 @@ services:
     ports:
       - "5433:5432"
     volumes:
-      - ./data:/var/lib/postgresql/data
+      - ./docker_data/sensearth_db:/var/lib/postgresql/data
     restart: always
 
 # Monitoring Database Service
   watchdog-db:
-    container_name: watchdog-db1
+    container_name: watchdog-db
     image: timescale/timescaledb-ha:pg14-latest
     environment:
       POSTGRES_USER: postgres
@@ -26,7 +26,7 @@ services:
     ports:
       - "5434:5432"
     volumes:
-      - ./data/watchdog:/var/lib/postgresql/data
+      - ./docker_data/watchdog_db:/var/lib/postgresql/data
     restart: always
 
 # Monitoring API Service
@@ -51,5 +51,5 @@ services:
     ports:
       - "8080:80"
     depends_on:
-      - timescaledb
+      - sensearth-db
     restart: always
