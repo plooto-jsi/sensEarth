@@ -42,8 +42,32 @@ services:
         - watchdog-db
       restart: always
 
+
+  middleware-api:
+    container_name: middleware-api
+    build:
+      context: ./anomaly-detection
+      dockerfile: Dockerfile
+    working_dir: /app
+    ports:
+      - "8000:8000"
+    depends_on:
+      - sensearth-db
+      - watchdog-api
+    environment:
+      DB_HOST: sensearth-db
+      DB_PORT: 5432
+      DB_NAME: sensearth_db
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+
+      MONITORING_API_HOST: watchdog-api
+      MONITORING_API_PORT: 8001
+    restart: always
+
+
   pgadmin:
-    container_name: pgadmin1
+    container_name: pgadmin
     image: dpage/pgadmin4
     environment:
       PGADMIN_DEFAULT_EMAIL: admin@example.com

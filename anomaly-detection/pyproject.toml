@@ -11,5 +11,13 @@ requires-python = ">=3.8.20"
 dependencies = []
 
 [tool.setuptools.packages.find]
-include = ["anomaly_detection", "anomaly_detection.*""]
-exclude = ["api", "api.*"]
+include = [
+    "anomaly_detection",
+    "anomaly_detection.*",
+    "monitoring",
+    "monitoring.*"
+]
+exclude = [
+    "api",
+    "api.*"
+]
