@@ -21,7 +21,7 @@ EXTRACTOR_MAP = {
     # "html": HTMLExtractor
 }
 
-API_URL = "http://127.0.0.1:8000"
+API_URL = "http://middleware-api:8000"
 STATE_DIR = "state"
 
 os.makedirs(STATE_DIR, exist_ok=True)
@@ -168,7 +168,7 @@ class Scraper:
                 self.register(unregistered)
                 self.send_measurements(records)
 
-                print(f"[{self.name}] Total records processed: {len(records)}\n")
+                print(f"[{self.name}] Total records processed: {len(records)}\n", flush=True)
 
             except Exception as e:
                 print(f"[{self.name}] Error during scraping: {e}")
