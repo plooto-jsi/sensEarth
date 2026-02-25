@@ -3,7 +3,7 @@
     "name": "ARSO_HydroStation_Scraper",
     "description": "Scraper for water level data from ARSO",
     "target_url": "https://www.arso.gov.si/xml/vode/hidro_podatki_zadnji.xml",
-    "fetch_interval": 120,
+    "fetch_interval": 3600,
     "selector": "None",
     "limit_results": 120,
     "format": "xml",
