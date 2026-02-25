@@ -11,7 +11,7 @@ services:
       - "5433:5432"
     volumes:
       - ./docker_data/sensearth_db:/var/lib/postgresql/data
-      - ./db_dumps/sensearth_db.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./db_dumps/sensearth_db_utf8.sql:/docker-entrypoint-initdb.d/init.sql
     restart: always
 
 # Monitoring Database Service
