@@ -1,0 +1,12 @@
+# Ignores Docker volumes and runtime data
+docker_data/
+scraper_state/
+
+# Ignores Postgres data directories
+sensearth_data/
+watchdog_data/
+
+# Ignores Python build artifacts
+monitoring.egg-info
+__pycache__/
+*.pyc
