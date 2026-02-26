@@ -10,8 +10,8 @@ services:
     ports:
       - "5433:5432"
     volumes:
-      - ./docker_data/sensearth_db:/var/lib/postgresql/data
-      - ./db_dumps/sensearth_db_utf8.sql:/docker-entrypoint-initdb.d/init.sql
+      - sensearth_data:/var/lib/postgresql/data
+      - ./init_db/sensearth_db_init.sql:/docker-entrypoint-initdb.d/init.sql
     restart: always
 
 # Monitoring Database Service
@@ -25,8 +25,8 @@ services:
     ports:
       - "5434:5432"
     volumes:
-      - ./docker_data/watchdog_db:/var/lib/postgresql/data
-      - ./db_dumps/monitoring_db.sql:/docker-entrypoint-initdb.d/init.sql
+      - watchdog_data:/var/lib/postgresql/data
+      - ./init_db/monitoring_db_init.sql:/docker-entrypoint-initdb.d/init.sql
     restart: always
 
 # Monitoring API Service
@@ -107,5 +107,7 @@ services:
 volumes:
   scraper_state:
   minio_data:
+  sensearth_data:
+  watchdog_data:
 
 
