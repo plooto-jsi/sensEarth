@@ -84,8 +84,11 @@ services:
     environment:
       PGADMIN_DEFAULT_EMAIL: admin@example.com
       PGADMIN_DEFAULT_PASSWORD: admin
+      PGADMIN_CONFIG_SERVER_MODE: "False"
     ports:
       - "8080:80"
+    volumes:
+      - ./pgadmin/servers.json:/pgadmin4/servers.json
     depends_on:
       - sensearth-db
     restart: always
