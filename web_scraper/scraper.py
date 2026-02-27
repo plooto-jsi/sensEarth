@@ -8,6 +8,7 @@ import requests
 
 from fetcher import Fetcher
 from mapper import Mapper
+from utils import retry_request
 from extractors.xml_extractor import XMLExtractor
 # from extractors.json_extractor import JSONExtractor
 # from extractors.csv_extractor import CSVExtractor
@@ -65,21 +66,27 @@ class Scraper:
         return {"nodes": {}, "sensors": {}}
 
     def register(self, payload: Dict) -> Dict:
-        try: 
-            response = requests.post(f"{API_URL}/register", json=payload)
+        if not payload.get("nodes") and not payload.get("sensors"):
+            return {}  # Nothing to register
+        try:
+            response = retry_request(
+                requests.post,
+                retries=5,
+                delay=5,
+                backoff=2,
+                url=f"{API_URL}/register",
+                json=payload
+            )
             data = response.json()
-
-            # Update state with returned hashes, ids and save
             self.state["nodes"].update(data.get("nodes", {}))
             self.state["sensors"].update(data.get("sensors", {}))
             self.save_state()
-            
             return data
         except Exception as e:
             print(f"Error during registration: {e}")
             return {}
 
-    def send_measurements(self, payload:  List[Dict]):
+    def send_measurements(self, payload: List[Dict]):
         measurements = []
         for entry in payload:
             for sensor in entry.get("sensors", []):
@@ -96,8 +103,18 @@ class Scraper:
                     })
 
         if measurements:
-            response = requests.post(f"{API_URL}/dataIngest", json=measurements)
-            return response.json()
+            try:
+                response = retry_request(
+                    requests.post,
+                    retries=5,
+                    delay=5,
+                    backoff=2,
+                    url=f"{API_URL}/dataIngest",
+                    json=measurements
+                )
+                return response.json()
+            except Exception as e:
+                print(f"Error sending measurements: {e}")
         return {}
     
     def stable_hash(self, obj) -> str:
