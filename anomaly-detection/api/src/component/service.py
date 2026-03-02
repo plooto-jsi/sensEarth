@@ -104,7 +104,7 @@ def register_entities(payload: RegisterPayload, db: Session) -> Dict[str, Dict[s
                 metadata={"node_hash": node_hash}
             )
 
-        except Exception:
+        except Exception as e:
 
             emit_event(
                 name="middleware",
@@ -206,7 +206,7 @@ def register_entities(payload: RegisterPayload, db: Session) -> Dict[str, Dict[s
                 metadata={"sensor_hash": sensor_data.sensor_hash, "node_hash": sensor_data.node_hash}
             )
 
-        except Exception:
+        except Exception as e:
             emit_event(
                 name="middleware",
                 instance_id="default",

@@ -66,6 +66,17 @@ class Scraper:
         return {"nodes": {}, "sensors": {}}
 
     def register(self, payload: Dict) -> Dict:
+        # Get payload infor and find kota_0 in altitude"
+        for node in payload.get("nodes", []):
+            if node.get("altitude", "").lower() == "kota_0":
+                print(f"Set altitude=0 for node {node.get('node_label')} based on description 'kota_0'")
+                node["altitude"] = 0.0
+
+        for sensor in payload.get("sensors", []):
+            if sensor.get("altitude", "").lower() == "kota_0":
+                print(f"Set altitude=0 for sensor {sensor.get('sensor_label')} based on description 'kota_0'")
+                sensor["altitude"] = 0.0
+                
         if not payload.get("nodes") and not payload.get("sensors"):
             return {}  # Nothing to register
         try:
