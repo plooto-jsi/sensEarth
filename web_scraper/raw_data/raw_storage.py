@@ -2,8 +2,10 @@ from minio import Minio
 from minio.error import S3Error
 import io
 import os
+import time
 
-MINIO_ENDPOINT     = os.getenv("MINIO_ENDPOINT", "localhost:9000")
+
+MINIO_ENDPOINT     = os.getenv("MINIO_ENDPOINT", "minio:9000")
 MINIO_ACCESS_KEY   = os.getenv("MINIO_ACCESS_KEY", "minioadmin")
 MINIO_SECRET_KEY   = os.getenv("MINIO_SECRET_KEY", "minioadmin")
 MINIO_BUCKET       = os.getenv("MINIO_BUCKET", "raw-data")
@@ -15,13 +17,18 @@ client = Minio(
     secure=False,
 )
 
+def init_bucket(retries=10, delay=2):
+    for i in range(retries):
+        try:
+            if not client.bucket_exists(MINIO_BUCKET):
+                client.make_bucket(MINIO_BUCKET)
+            print("[MinIO] Bucket ready")
+            return
+        except Exception as e:
+            print(f"[MinIO] Waiting... ({i+1}/{retries})")
+            time.sleep(delay)
 
-def init_bucket() -> None:
-    """Make sure the raw-data bucket exists."""
-
-    if not client.bucket_exists(MINIO_BUCKET):
-        client.make_bucket(MINIO_BUCKET)
-
+    raise RuntimeError("MinIO not available")
 
 def upload_raw_data(object_name: str, data: bytes, content_type="application/octet-stream") -> str:
     """Upload raw bytes to MinIO, return object path."""
@@ -43,10 +50,18 @@ def download_raw_data(object_name: str) -> bytes:
         response.close()
         response.release_conn()
         return data
-    except S3Error:
+    except S3Error as e:
+        print(f"[MinIO] Error downloading {object_name}: {e}")
         return None
 
 
 def list_raw_objects(prefix: str = ""):
     """List objects inside the bucket."""
     return [obj.object_name for obj in client.list_objects(MINIO_BUCKET, prefix=prefix)]
+
+def object_exists(object_name: str) -> bool:
+    try:
+        client.stat_object(MINIO_BUCKET, object_name)
+        return True
+    except S3Error:
+        return False
