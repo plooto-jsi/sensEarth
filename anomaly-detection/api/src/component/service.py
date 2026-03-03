@@ -48,6 +48,7 @@ def register_entities(payload: RegisterPayload, db: Session) -> Dict[str, Dict[s
     """
 
     emit_heartbeat(name="middleware", instance_id="default", status="OK")
+    emit_heartbeat(name="database", instance_id="default", status="OK")
 
     emit_event(
         name="middleware",
@@ -246,6 +247,8 @@ def register_entities(payload: RegisterPayload, db: Session) -> Dict[str, Dict[s
 def ingest_measurements(payload: dataIngestPayload, db: Session) -> Dict[str, Any]:
 
     emit_heartbeat(name="middleware", instance_id="default", status="OK")
+    emit_heartbeat(name="database", instance_id="default", status="OK")
+
 
     measurement_buffer = []
 
@@ -334,6 +337,8 @@ def create_model(request: Dict, db: Session):
     }
     """
 
+    emit_heartbeat(name="database", instance_id="default", status="OK")
+
     emit_event(
         name="middleware",
         instance_id="default",
@@ -352,6 +357,9 @@ def create_model(request: Dict, db: Session):
     if not model_name or model_name == "":
         logger.warning("Model name is required")
         raise HTTPException(status_code=400, detail="model_name is required")
+
+    emit_component_registration(name=model_name, instance_id="default", component_type="model")
+
 
     try:
         # Create model
@@ -442,6 +450,8 @@ async def model_results(payload: Dict, MODEL_REGISTRY: Dict[str, Any], db: Sessi
     """
 
     emit_heartbeat(name="middleware", instance_id="default", status="OK")
+    emit_heartbeat(name="database", instance_id="default", status="OK")
+
 
     emit_event(
         name="middleware",
@@ -502,6 +512,7 @@ async def model_results(payload: Dict, MODEL_REGISTRY: Dict[str, Any], db: Sessi
         sensor_id = row_sensor[0]
 
         model_instance = ModelClass(
+            model_name=model_name,
             sensor_id=sensor_id,
             conf=parameters
         )
@@ -537,6 +548,9 @@ def get_models(db: Session):
     """
     Fetch all registered models with their details.
     """
+
+    emit_heartbeat(name="database", instance_id="default", status="OK")
+
     rows = db.execute(
         text("SELECT model_id, name, description, model_type FROM model")
     ).fetchall()
@@ -550,6 +564,8 @@ def get_model(model_name: str, db: Session):
     """
     Fetch specific model information by name.
     """
+    emit_heartbeat(name="database", instance_id="default", status="OK")
+
     try:
         row = db.execute(
             text("SELECT model_id, name, description, model_type, parameters FROM model WHERE name = :model_name"),
@@ -585,6 +601,8 @@ def delete_model(model_name: str, db: Session):
     """
     Deletes specific model. This will delete the model and all associated configurations and results.
     """
+    emit_heartbeat(name="database", instance_id="default", status="OK")
+
     try:
         q_delete = text("""
             DELETE FROM model

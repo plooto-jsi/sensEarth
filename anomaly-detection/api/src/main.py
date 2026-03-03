@@ -35,11 +35,15 @@ def startup_event():
 
     try:
         logger.debug("Emitting component registration to monitoring system")
-        emit_component_registration(name="middleware", instance_id="default", component_type="middleware",)
+        emit_component_registration(name="middleware", instance_id="default", component_type="middleware")
         logger.debug("Component registration sent to monitoring system")
 
         logger.debug( "Emitting initial heartbeat to monitoring system")
         emit_heartbeat(name="middleware", instance_id="default", status="OK")
+
+        logger.debug("Emitting component registration for database to monitoring system")
+        emit_component_registration(name="database", instance_id="default", component_type="database")
+
     except Exception as e:
         logger.warning(f"Error during component registration: {e}")
 
