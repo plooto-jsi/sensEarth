@@ -19,3 +19,9 @@ def retry_request(func, retries=5, delay=5, backoff=2, *args, **kwargs):
             time.sleep(current_delay)
             current_delay *= backoff
     raise ConnectionError(f"Failed after {retries} attempts")
+
+def safe_emit(func, **kwargs):
+    try:
+        func(**kwargs)
+    except Exception:
+        pass

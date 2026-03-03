@@ -5,6 +5,7 @@ import json
 import asyncio
 import argparse
 import requests
+import time
 
 from fetcher import Fetcher
 from mapper import Mapper
@@ -13,6 +14,10 @@ from extractors.xml_extractor import XMLExtractor
 # from extractors.json_extractor import JSONExtractor
 # from extractors.csv_extractor import CSVExtractor
 # from extractors.html_extractor import HTMLExtractor
+
+from utils import retry_request, safe_emit
+
+from monitoring.client import emit_component_registration, emit_event, emit_metric, emit_heartbeat
 
 
 EXTRACTOR_MAP = {
@@ -55,6 +60,8 @@ class Scraper:
         self.state_file = os.path.join(STATE_DIR, f"{self.name}_state.json")
         self.state = self.load_state()
 
+        safe_emit(emit_component_registration, name="scraper",instance_id=self.name, component_type="scrapers")
+
     def save_state(self):
         with open(self.state_file, "w") as f:
             json.dump(self.state, f, indent=2)
@@ -67,6 +74,8 @@ class Scraper:
 
     def register(self, payload: Dict) -> Dict:
         # Get payload infor and find kota_0 in altitude"
+        safe_emit(emit_heartbeat, name="scraper", instance_id=self.name, status="OK")
+
         for node in payload.get("nodes", []):
             if node.get("altitude", "").lower() == "kota_0":
                 print(f"Set altitude=0 for node {node.get('node_label')} based on description 'kota_0'")
@@ -92,12 +101,17 @@ class Scraper:
             self.state["nodes"].update(data.get("nodes", {}))
             self.state["sensors"].update(data.get("sensors", {}))
             self.save_state()
+
+            safe_emit(emit_event, name=self.name,instance_id="default",event_type="registration_success",severity="INFO",message=f"Registered {len(data.get('nodes', {}))} nodes and {len(data.get('sensors', {}))} sensors")
+
             return data
         except Exception as e:
             print(f"Error during registration: {e}")
+            safe_emit(emit_event, name=self.name,instance_id="default",event_type="registration_failure",severity="ERROR",message=f"Registration failed: {e}")
             return {}
 
     def send_measurements(self, payload: List[Dict]):
+        safe_emit(emit_heartbeat, name="scraper", instance_id=self.name, status="OK")
         measurements = []
         for entry in payload:
             for sensor in entry.get("sensors", []):
@@ -124,8 +138,12 @@ class Scraper:
                     json=measurements
                 )
                 return response.json()
-            except Exception as e:
+
+                safe_emit(emit_event, name=self.name,instance_id="default",event_type="data_ingest_success",severity="INFO",message=f"Sent measurements successfully")
+                safe_emit(emit_metric, name=self.name, instance_id="default", metric_name="measurements_sent", value=len(measurements))
+            except Exception as e:  
                 print(f"Error sending measurements: {e}")
+                safe_emit(emit_event, name=self.name,instance_id="default",event_type="data_ingest_failure",severity="ERROR",message=f"Failed to send measurements: {e}")
         return {}
     
     def stable_hash(self, obj) -> str:
@@ -178,10 +196,23 @@ class Scraper:
         return to_register
 
     def run_once(self):
-        raw = self.fetcher.fetch(self.scraper_config["target_url"])
-        extracted = self.extractor.extract(raw, self.scraper_config["root_tag"])
-        mapped = self.mapper.map_records(extracted)
-        return mapped
+        loop_start = time.time()
+        try: 
+            safe_emit(emit_event, name=self.name,instance_id="default",event_type="scrape_started",severity="INFO",message="Scraping cycle started")
+            
+            raw = self.fetcher.fetch(self.scraper_config["target_url"])
+            safe_emit(emit_metric, name=self.name, instance_id="default", metric_name="fetch_raw_duration_seconds", value=time.time() - loop_start)
+
+            extracted = self.extractor.extract(raw, self.scraper_config["root_tag"])
+            mapped = self.mapper.map_records(extracted)
+
+            safe_emit(emit_metric, name=self.name, instance_id="default", metric_name="scrape_duration_seconds", value=time.time() - loop_start)
+            safe_emit(emit_heartbeat, name="scraper", instance_id=self.name, status="OK")
+            return mapped
+        except Exception:
+            print(f"[{self.name}] Error during scraping run_once")
+            safe_emit(emit_event, name=self.name,instance_id="default",event_type="scrape_failed",severity="ERROR",message=f"Scraping failed")
+            return []
 
     async def run(self):
         while True:
@@ -204,7 +235,7 @@ class Scraper:
             if self.fetch_interval <= 0:
                 break
             await asyncio.sleep(self.fetch_interval)
-
+        safe_emit(emit_heartbeat, name="scraper", instance_id=self.name, status="FAIL")
 
 def load_configs(folder="configs", selected=None):
     """

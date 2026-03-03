@@ -3,7 +3,7 @@ DROP TABLE IF EXISTS heartbeats CASCADE;
 DROP TABLE IF EXISTS metrics CASCADE;
 DROP TABLE IF EXISTS events CASCADE;
 
-CREATE TYPE component_type AS ENUM ('scraper', 'model', 'database', 'middleware', 'minio', 'other');
+CREATE TYPE component_type AS ENUM ('scrapers', 'model', 'database', 'middleware', 'minio', 'other');
 CREATE TYPE component_status AS ENUM ('active', 'inactive', 'degraded');
 CREATE TYPE heartbeat_status AS ENUM ('OK', 'WARN', 'FAIL');
 CREATE TYPE event_severity AS ENUM ('INFO','WARN','ERROR','CRITICAL');
