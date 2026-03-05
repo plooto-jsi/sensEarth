@@ -25,3 +25,15 @@ def safe_emit(func, **kwargs):
         func(**kwargs)
     except Exception:
         pass
+
+def normalize_altitude(payload: dict):
+    """
+    If altitude is described as 'kota_0', set it to 0.0
+    for all nodes and sensors in the payload.
+    """
+    for entity_type in ("nodes", "sensors"):
+        for item in payload.get(entity_type, []):
+            if str(item.get("altitude", "")).lower() == "kota_0":
+                label_key = "node_label" if entity_type == "nodes" else "sensor_label"
+                print(f"Set altitude=0 for {entity_type[:-1]} {item.get(label_key)} based on description 'kota_0'")
+                item["altitude"] = 0.0

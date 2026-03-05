@@ -7,18 +7,16 @@ import argparse
 import requests
 import time
 
+from logger import logger
 from fetcher import Fetcher
 from mapper import Mapper
-from utils import retry_request
+from utils import retry_request, safe_emit, normalize_altitude
 from extractors.xml_extractor import XMLExtractor
 # from extractors.json_extractor import JSONExtractor
 # from extractors.csv_extractor import CSVExtractor
 # from extractors.html_extractor import HTMLExtractor
 
-from utils import retry_request, safe_emit
-
 from monitoring.client import emit_component_registration, emit_event, emit_metric, emit_heartbeat
-
 
 EXTRACTOR_MAP = {
     "xml": XMLExtractor,
@@ -60,31 +58,29 @@ class Scraper:
         self.state_file = os.path.join(STATE_DIR, f"{self.name}_state.json")
         self.state = self.load_state()
 
-        safe_emit(emit_component_registration, name="scraper",instance_id=self.name, component_type="scrapers")
+        safe_emit(emit_component_registration, name="scraper",instance_id=self.name, component_type="scraper")
 
     def save_state(self):
         with open(self.state_file, "w") as f:
             json.dump(self.state, f, indent=2)
 
     def load_state(self):
-        if os.path.exists(self.state_file):
-            with open(self.state_file, "r", encoding="utf-8") as f:
-                return json.load(f)
-        return {"nodes": {}, "sensors": {}}
+        try:
+            if os.path.exists(self.state_file):
+                with open(self.state_file, "r", encoding="utf-8") as f:
+                    return json.load(f)
+            return {"nodes": {}, "sensors": {}}
+        except json.JSONDecodeError as e:
+            logger.error(f"Error loading state for {self.name}: {e}")
+            return {"nodes": {}, "sensors": {}}
 
     def register(self, payload: Dict) -> Dict:
-        # Get payload infor and find kota_0 in altitude"
+        """
+        Registers nodes and sensors from the payload using the /register endpoint.
+        """
         safe_emit(emit_heartbeat, name="scraper", instance_id=self.name, status="OK")
-
-        for node in payload.get("nodes", []):
-            if node.get("altitude", "").lower() == "kota_0":
-                print(f"Set altitude=0 for node {node.get('node_label')} based on description 'kota_0'")
-                node["altitude"] = 0.0
-
-        for sensor in payload.get("sensors", []):
-            if sensor.get("altitude", "").lower() == "kota_0":
-                print(f"Set altitude=0 for sensor {sensor.get('sensor_label')} based on description 'kota_0'")
-                sensor["altitude"] = 0.0
+        # Get payload infor and find kota_0 in altitude"
+        normalize_altitude(payload)
                 
         if not payload.get("nodes") and not payload.get("sensors"):
             return {}  # Nothing to register
@@ -102,12 +98,12 @@ class Scraper:
             self.state["sensors"].update(data.get("sensors", {}))
             self.save_state()
 
-            safe_emit(emit_event, name=self.name,instance_id="default",event_type="registration_success",severity="INFO",message=f"Registered {len(data.get('nodes', {}))} nodes and {len(data.get('sensors', {}))} sensors")
+            safe_emit(emit_event, name="scraper",instance_id=self.name,event_type="registration_success",severity="INFO",message=f"Registered {len(data.get('nodes', {}))} nodes and {len(data.get('sensors', {}))} sensors")
 
             return data
         except Exception as e:
-            print(f"Error during registration: {e}")
-            safe_emit(emit_event, name=self.name,instance_id="default",event_type="registration_failure",severity="ERROR",message=f"Registration failed: {e}")
+            logger.error(f"Error during registration: {e}")
+            safe_emit(emit_event, name="scraper",instance_id=self.name,event_type="registration_failure",severity="ERROR",message=f"Registration failed: {e}")
             return {}
 
     def send_measurements(self, payload: List[Dict]):
@@ -118,7 +114,7 @@ class Scraper:
                 sensor_hash = sensor["sensor_hash"]
                 sensor_id = self.state["sensors"].get(sensor_hash)
                 if not sensor_id:
-                    print(f"Skipping unknown sensor {sensor_hash}")
+                    logger.warning(f"Skipping unknown sensor {sensor_hash}")
                     continue
                 for m in sensor.get("measurements", []):
                     measurements.append({
@@ -139,11 +135,11 @@ class Scraper:
                 )
                 return response.json()
 
-                safe_emit(emit_event, name=self.name,instance_id="default",event_type="data_ingest_success",severity="INFO",message=f"Sent measurements successfully")
-                safe_emit(emit_metric, name=self.name, instance_id="default", metric_name="measurements_sent", value=len(measurements))
+                safe_emit(emit_event, name="scraper",instance_id=self.name,event_type="data_ingest_success",severity="INFO",message=f"Sent measurements successfully")
+                safe_emit(emit_metric, name="scraper", instance_id=self.name, metric_name="measurements_sent", value=len(measurements))
             except Exception as e:  
-                print(f"Error sending measurements: {e}")
-                safe_emit(emit_event, name=self.name,instance_id="default",event_type="data_ingest_failure",severity="ERROR",message=f"Failed to send measurements: {e}")
+                logger.error(f"Error sending measurements: {e}")
+                safe_emit(emit_event, name="scraper",instance_id=self.name,event_type="data_ingest_failure",severity="ERROR",message=f"Failed to send measurements: {e}")
         return {}
     
     def stable_hash(self, obj) -> str:
@@ -168,7 +164,7 @@ class Scraper:
                         "sensor_type": sensor.get("sensor_label"),
                         "longitude": sensor.get("longitude"),
                         "latitude": sensor.get("latitude"),
-                        "altitude": sensor.get("altitude")
+                        "altitude": sensor.get("altitude") # Fix if sensor.get("altitude") is not None 
                     })
         return records
 
@@ -198,20 +194,21 @@ class Scraper:
     def run_once(self):
         loop_start = time.time()
         try: 
-            safe_emit(emit_event, name=self.name,instance_id="default",event_type="scrape_started",severity="INFO",message="Scraping cycle started")
+            safe_emit(emit_heartbeat, name="scraper", instance_id=self.name, status="OK")
+            safe_emit(emit_event, name="scraper",instance_id=self.name,event_type="scrape_started",severity="INFO",message="Scraping cycle started")
             
             raw = self.fetcher.fetch(self.scraper_config["target_url"])
-            safe_emit(emit_metric, name=self.name, instance_id="default", metric_name="fetch_raw_duration_seconds", value=time.time() - loop_start)
+            safe_emit(emit_metric, name="scraper", instance_id=self.name, metric_name="fetch_raw_duration_seconds", value=time.time() - loop_start)
 
             extracted = self.extractor.extract(raw, self.scraper_config["root_tag"])
             mapped = self.mapper.map_records(extracted)
 
-            safe_emit(emit_metric, name=self.name, instance_id="default", metric_name="scrape_duration_seconds", value=time.time() - loop_start)
-            safe_emit(emit_heartbeat, name="scraper", instance_id=self.name, status="OK")
+            safe_emit(emit_metric, name="scraper", instance_id=self.name, metric_name="scrape_duration_seconds", value=time.time() - loop_start)
             return mapped
         except Exception:
-            print(f"[{self.name}] Error during scraping run_once")
-            safe_emit(emit_event, name=self.name,instance_id="default",event_type="scrape_failed",severity="ERROR",message=f"Scraping failed")
+            logger.error(f"[{self.name}] Error during scraping run_once")
+            safe_emit(emit_event, name="scraper",instance_id=self.name,event_type="scrape_failed",severity="ERROR",message=f"Scraping failed")
+            safe_emit(emit_heartbeat, name="scraper", instance_id=self.name, status="FAIL")
             return []
 
     async def run(self):
@@ -227,10 +224,10 @@ class Scraper:
                 self.register(unregistered)
                 self.send_measurements(records)
 
-                print(f"[{self.name}] Total records processed: {len(records)}\n", flush=True)
+                logger.info(f"[{self.name}] Total records processed: {len(records)}")
 
             except Exception as e:
-                print(f"[{self.name}] Error during scraping: {e}")
+                logger.error(f"[{self.name}] Error during scraping: {e}")
 
             if self.fetch_interval <= 0:
                 break

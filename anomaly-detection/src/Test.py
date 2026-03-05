@@ -53,6 +53,8 @@ class Test(ConsumerAbstract):
         self.data_buffer = []  # Store manually inserted data
 
         self.conf = conf
+
+        self.anomalies = []
         
         if conf:
             self.configure(con=conf)

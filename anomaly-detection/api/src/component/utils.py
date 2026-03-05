@@ -1,4 +1,7 @@
 from typing import Optional
+from monitoring.client import emit_heartbeat
+from sqlalchemy.orm import Session
+
 
 def create_location_params(longitude: Optional[float], latitude: Optional[float], altitude: Optional[float] = None):
     """
@@ -13,7 +16,17 @@ def create_location_params(longitude: Optional[float], latitude: Optional[float]
 
 def rows_to_dict(rows):
     return [dict(r._mapping) for r in rows]
-
-
+    
 def row_to_dict(row):
     return dict(row._mapping) if row else None
+
+def db_healthcheck(db: Session):
+    try:
+        db.execute(text("SELECT 1;"))
+        emit_heartbeat(name="database", instance_id="default", status="OK")
+
+        return {"status": "connected"}
+    except Exception as e:
+        emit_heartbeat(name="database", instance_id="default", status="FAIL")
+        
+        return {"status": "error", "details": str(e)}

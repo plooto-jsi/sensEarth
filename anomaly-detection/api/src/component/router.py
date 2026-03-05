@@ -66,7 +66,7 @@ def data_ingest(payload: List[MeasurementPayload], db: Session = Depends(get_db)
     return ingest_measurements(payload, db)
 
 @router.post("/registerModel")
-def register_model(request: Dict, db: Session = Depends(get_db)):
+def register_model(request: CreateModelPayload, db: Session = Depends(get_db)):
     """
     Register a new model based on the request payload.
     Parameters:
@@ -120,3 +120,31 @@ def remove_model(model_name: str, db: Session = Depends(get_db)) -> Dict[str, An
     Delete model by name. This will delete the model and all associated configurations and results.
     """
     return delete_model(model_name, db)
+
+@router.get("/nodes")
+def list_nodes(db: Session = Depends(get_db)):
+    """
+    Display all registered nodes with their details.
+    """
+    return get_nodes(db)
+
+@router.get("/nodes/{node_id}")
+def list_node(node_id: int, db: Session = Depends(get_db)) -> Dict[str, Any]:
+    """
+    Display a specific registered node with its details.
+    """
+    return get_node(node_id, db)
+
+@router.get("/sensors")
+def list_sensors(db: Session = Depends(get_db)):
+    """
+    Display all registered sensors with their details.
+    """
+    return get_sensors(db)
+
+@router.get("/sensors/{sensor_id}")
+def list_sensor(sensor_id: int, db: Session = Depends(get_db)) -> Dict[str, Any]:
+    """
+    Display a specific registered sensor with its details.
+    """
+    return get_sensor(sensor_id, db)

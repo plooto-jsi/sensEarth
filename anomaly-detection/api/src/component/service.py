@@ -1,14 +1,9 @@
 import os
 import json
 import time
-import argparse
-import tempfile
 from datetime import datetime, timezone, timedelta
-from enum import Enum
 from typing import Dict, Any, List, Optional
 
-import numpy as np
-import pandas as pd
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi import Request, UploadFile, File, Form, Query
 from fastapi.responses import JSONResponse
@@ -31,7 +26,7 @@ from monitoring.client import emit_component_registration, emit_event, emit_metr
 
 
 MODEL_REGISTRY = {
-    "anomaly_detection": AnomalyDetectionModel,
+    "anomaly_detection_model": AnomalyDetectionModel,
 }
 
 CONFIG_DIR = os.path.abspath("configuration")
@@ -42,23 +37,22 @@ def register_entities(payload: RegisterPayload, db: Session) -> Dict[str, Dict[s
     Registers nodes and sensors from the payload.
     Returns:
     {
-        "nodes": {node_hash: node_id, ...},
-        "sensors": {sensor_hash: sensor_id, ...}
+        "nodes": {node_hash1: node_id1, ...},
+        "sensors": {sensor_hash1: sensor_id1, ...}
     }
     """
 
     emit_heartbeat(name="middleware", instance_id="default", status="OK")
-    emit_heartbeat(name="database", instance_id="default", status="OK")
+    db_healthcheck(db) 
 
-    emit_event(
-        name="middleware",
+    emit_event(name="middleware",
         instance_id="default",
         event_type="registering_entities",
         severity="INFO",
         message="Register endpoint called",
         metadata={"payload_size": len(payload.nodes) + len(payload.sensors)},
     )
-    logger.info(f"Register endpoint called with payload: {payload}")
+    logger.info("Register endpoint called", extra={"nodes": len(payload.nodes), "sensors": len(payload.sensors)})
 
     node_map = {}          
     sensor_map = {}        
@@ -95,15 +89,6 @@ def register_entities(payload: RegisterPayload, db: Session) -> Dict[str, Dict[s
                     **loc_params
                 }
             ).fetchone()[0]
-
-            emit_event(
-                name="middleware",
-                instance_id="default",
-                event_type="register_node_success",
-                severity="INFO",
-                message=f"Successfully registered node with hash: {node_hash}",
-                metadata={"node_hash": node_hash}
-            )
 
         except Exception as e:
 
@@ -198,15 +183,6 @@ def register_entities(payload: RegisterPayload, db: Session) -> Dict[str, Dict[s
                 }
             ).fetchone()[0]
 
-            emit_event(
-                name="middleware",
-                instance_id="default",
-                event_type="register_sensor_success",
-                severity="INFO",
-                message=f"Sensor {sensor_data.sensor_label} registered",
-                metadata={"sensor_hash": sensor_data.sensor_hash, "node_hash": sensor_data.node_hash}
-            )
-
         except Exception as e:
             emit_event(
                 name="middleware",
@@ -224,31 +200,19 @@ def register_entities(payload: RegisterPayload, db: Session) -> Dict[str, Dict[s
 
         sensor_map[sensor_hash] = sensor_id
 
-    emit_metric(
-    name="middleware",
-    instance_id="default",
-    metric_name="registered_nodes",
-    value=len(node_map),
-    unit="count"
-    )
-
-    emit_metric(
-        name="middleware",
-        instance_id="default",
-        metric_name="registered_sensors",
-        value=len(sensor_map),
-        unit="count"
-    )
+    emit_metric(name="middleware", instance_id="default", metric_name="registered_nodes", value=len(node_map), unit="count")
+    emit_metric(name="middleware", instance_id="default", metric_name="registered_sensors", value=len(sensor_map), unit="count")
 
     db.commit()
     return {"nodes": node_map, "sensors": sensor_map}
 
 
 def ingest_measurements(payload: dataIngestPayload, db: Session) -> Dict[str, Any]:
-
+    """
+    Ingests measurement data for sensors. Each entry in the payload must include 'sensor_hash', 'timestamp_utc', and 'value'.
+    """
     emit_heartbeat(name="middleware", instance_id="default", status="OK")
-    emit_heartbeat(name="database", instance_id="default", status="OK")
-
+    db_healthcheck(db) 
 
     measurement_buffer = []
 
@@ -266,7 +230,6 @@ def ingest_measurements(payload: dataIngestPayload, db: Session) -> Dict[str, An
             {"hashes": sensor_hashes}
         ).fetchall()
         hash_to_id = {row[0]: row[1] for row in rows}
-
 
     for measurement in payload:
         sensor_hash = measurement.sensor_hash
@@ -321,11 +284,11 @@ def ingest_measurements(payload: dataIngestPayload, db: Session) -> Dict[str, An
 
     return {"status": "ok", "inserted_measurements": len(measurement_buffer)}
 
-def create_model(request: Dict, db: Session):
+def create_model(payload: CreateModelPayload, db: Session):
     """
     Create a new model and optionally associate it with a sensor.
 
-    Expected keys in request:
+    Expected keys in payload:
     - model_name: str (required)
     - model_description: str (optional)
     - model_parameters: dict (optional, stored as JSONB)
@@ -338,6 +301,7 @@ def create_model(request: Dict, db: Session):
     """
 
     emit_heartbeat(name="database", instance_id="default", status="OK")
+    db_healthcheck(db)
 
     emit_event(
         name="middleware",
@@ -345,21 +309,18 @@ def create_model(request: Dict, db: Session):
         event_type="registering_model",
         severity="INFO",
         message="Register model endpoint called",
-        metadata={"model_name": request.get("model_name")}  
+        metadata={"model_name": payload.model_name}  
     )
 
-    model_name = request.get("model_name")
-    model_description = request.get("model_description")
-    model_parameters = request.get("model_parameters", {})
-    sensor_id_list = request.get("sensor_id_list", [])
-    model_type = request.get("model_type", "anomaly_detection")
+    model_name = payload.model_name
+    model_description = payload.model_description
+    model_parameters = payload.model_parameters
+    sensor_id_list = payload.sensor_id_list
+    model_type = payload.model_type
 
     if not model_name or model_name == "":
         logger.warning("Model name is required")
         raise HTTPException(status_code=400, detail="model_name is required")
-
-    emit_component_registration(name=model_name, instance_id="default", component_type="model")
-
 
     try:
         # Create model
@@ -450,8 +411,7 @@ async def model_results(payload: Dict, MODEL_REGISTRY: Dict[str, Any], db: Sessi
     """
 
     emit_heartbeat(name="middleware", instance_id="default", status="OK")
-    emit_heartbeat(name="database", instance_id="default", status="OK")
-
+    db_healthcheck(db)
 
     emit_event(
         name="middleware",
@@ -476,12 +436,19 @@ async def model_results(payload: Dict, MODEL_REGISTRY: Dict[str, Any], db: Sessi
         {"model_name": model_name}
     ).fetchone()
 
-    
     if not row_model:
         raise HTTPException(status_code=404, detail=f"Model '{model_name}' not found")
 
     model_id = row_model[0]
     model_type = row_model[1]
+
+    if not parameters:
+        row_params = db.execute(
+            text("SELECT parameters FROM model WHERE model_id = :model_id"),
+            {"model_id": model_id}
+        ).fetchone()
+
+        parameters = row_params[0]
 
     ModelClass = MODEL_REGISTRY.get(model_type)
     if not ModelClass:
@@ -549,7 +516,7 @@ def get_models(db: Session):
     Fetch all registered models with their details.
     """
 
-    emit_heartbeat(name="database", instance_id="default", status="OK")
+    db_healthcheck(db)
 
     rows = db.execute(
         text("SELECT model_id, name, description, model_type FROM model")
@@ -564,7 +531,7 @@ def get_model(model_name: str, db: Session):
     """
     Fetch specific model information by name.
     """
-    emit_heartbeat(name="database", instance_id="default", status="OK")
+    db_healthcheck(db)
 
     try:
         row = db.execute(
@@ -585,6 +552,8 @@ def delete_models(db: Session) -> None:
     """
     Deletes all models from the database. This will delete all models and associated configurations and results.
     """
+    db_healthcheck(db)
+
     try: 
         q_delete_all = text("DELETE FROM model")
         db.execute(q_delete_all)
@@ -601,7 +570,7 @@ def delete_model(model_name: str, db: Session):
     """
     Deletes specific model. This will delete the model and all associated configurations and results.
     """
-    emit_heartbeat(name="database", instance_id="default", status="OK")
+    db_healthcheck(db)
 
     try:
         q_delete = text("""
@@ -622,3 +591,84 @@ def delete_model(model_name: str, db: Session):
         db.rollback()
         logger.error("Error removing model", exc_info=True)
         raise HTTPException(status_code=500, detail="Failed to remove model")
+
+def get_nodes(db: Session):
+    """
+    Fetch all registered nodes with their details.
+    """
+    db_healthcheck(db)
+
+    rows = db.execute(
+        text("SELECT node_id, node_label, node_hash, description FROM sensor_node")
+    ).fetchall()
+
+    if not rows:
+        logger.info("No nodes found in database")
+
+    return rows_to_dict(rows)
+
+def get_node(node_id: int, db: Session):
+    """
+    Fetch specific node information by ID.
+    """
+    db_healthcheck(db)
+
+    try:
+        row = db.execute(
+            text("SELECT node_id, node_label, node_hash, description FROM sensor_node WHERE node_id = :node_id"),
+            {"node_id": node_id}
+        ).fetchone()
+
+        if not row:
+            logger.warning(f"Node with ID '{node_id}' not found in database")
+            raise HTTPException(status_code=404, detail=f"Node with ID '{node_id}' not found")
+    except Exception as e:
+        logger.error("Error fetching node", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to fetch node")
+
+    return row_to_dict(row)
+
+def get_sensors(db: Session):
+    """
+    Fetch all registered sensors with their details.
+    """
+    db_healthcheck(db)
+
+    rows = db.execute(
+        text("""
+            SELECT s.sensor_id, s.sensor_label, s.sensor_hash, s.description, st.name AS sensor_type
+            FROM sensor s
+            JOIN sensor_type st ON s.sensor_type_id = st.sensor_type_id
+        """)
+    ).fetchall()
+
+    if not rows:
+        logger.info("No sensors found in database")
+
+    return rows_to_dict(rows)
+
+def get_sensor(sensor_id: int, db: Session):
+    """
+    Fetch specific sensor information by ID.
+    """
+    db_healthcheck(db)
+
+    try:
+        row = db.execute(
+            text("""
+                SELECT s.sensor_id, s.sensor_label, s.sensor_hash, s.description, st.name AS sensor_type
+                FROM sensor s
+                JOIN sensor_type st ON s.sensor_type_id = st.sensor_type_id
+                WHERE s.sensor_id = :sensor_id
+            """),
+            {"sensor_id": sensor_id}
+        ).fetchone()
+
+        if not row:
+            logger.warning(f"Sensor with ID '{sensor_id}' not found in database")
+            raise HTTPException(status_code=404, detail=f"Sensor with ID '{sensor_id}' not found")
+    except Exception as e:
+        logger.error("Error fetching sensor", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to fetch sensor")
+
+    return row_to_dict(row)

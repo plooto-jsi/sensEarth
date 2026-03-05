@@ -6,13 +6,8 @@ class AnomalyDetectionModel(BaseModel):
     def __init__(self, model_name, sensor_id, conf, sliding_window_size=100):
         super().__init__(model_name, sensor_id, conf, sliding_window_size)
 
-        emit_component_registration(name=model_name, instance_id="default", component_type="model")
-    
-        emit_heartbeat(
-            name=model_name,
-            instance_id="default",
-            status="INITIALIZED"
-        )
+        emit_component_registration(name="anomaly_detection_model", instance_id=model_name, component_type="model")
+        emit_heartbeat(name="anomaly_detection_model", instance_id=self.model_name, status="INITIALIZED")
 
     def data_ingestion(self, measurements):
         self.data = [
@@ -24,66 +19,58 @@ class AnomalyDetectionModel(BaseModel):
         ]
 
         emit_metric(
-            name=self.model_name,
-            instance_id="default",
+            name="anomaly_detection_model",
+            instance_id=self.model_name,
             metric_name="ingested_measurements",
             value=len(self.data),
             unit="count"
         )
 
         emit_event(
-            name=self.model_name,
-            instance_id="default",
+            name="anomaly_detection_model",
+            instance_id=self.model_name,
             event_type="data_ingested",
             severity="INFO",
             message=f"Ingested {len(self.data)} measurements"
         )
 
     def run(self):
-        emit_heartbeat(
-            name=self.model_name,
-            instance_id="default",
-            status="OK"
-        )
+        emit_heartbeat(name="anomaly_detection_model", instance_id=self.model_name, status="OK")
 
         try:
             self.detector = Test(conf=self.conf)
             self.result = self.detector.read_streaming_data(self.data)
 
             emit_metric(
-                name=self.model_name,
-                instance_id="default",
+                name="anomaly_detection_model",
+                instance_id=self.model_name,
                 metric_name="processed_measurements",
                 value=len(self.data),
                 unit="count"
             )
 
             emit_event(
-                name=self.model_name,
-                instance_id="default",
+                name="anomaly_detection_model",
+                instance_id=self.model_name,
                 event_type="processing_completed",
                 severity="INFO",
                 message=f"Processed {len(self.data)} measurements"
             )
 
-            emit_heartbeat(
-                name=self.model_name,
-                instance_id="default",
-                status="OK"
-            )
+            emit_heartbeat(name="anomaly_detection_model", instance_id=self.model_name, status="OK")
 
             return self.result
 
         except Exception as e:
             emit_heartbeat(
-                name=self.model_name,
-                instance_id="default",
+                name="anomaly_detection_model",
+                instance_id=self.model_name,
                 status="FAIL"
             )
 
             emit_event(
-                name=self.model_name,
-                instance_id="default",
+                name="anomaly_detection_model",
+                instance_id=self.model_name,
                 event_type="processing_failed",
                 severity="ERROR",
                 message=str(e)

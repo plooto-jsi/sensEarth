@@ -1,5 +1,9 @@
 class Mapper:
-    """Maps extracted records to DB schema based on mapping_config (supports nested dicts)."""
+    """
+    Maps extracted records to DB schema based on mapping_config (supports nested dicts).
+    Returns configuration value, if no record key matches. 
+    For example, mapping_config = {"db_field": "record_key"} will map record["record_key"] to db_field.
+    """
 
     def __init__(self, mapping_config: dict):
         self.mapping_config = mapping_config

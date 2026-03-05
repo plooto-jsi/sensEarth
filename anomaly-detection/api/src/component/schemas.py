@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 from datetime import datetime
 
 class NodePayload(BaseModel):
@@ -42,5 +42,19 @@ class dataIngestPayload(BaseModel):
 class runModelPayload(BaseModel):
     sensor_id: str
     algorithm_name: str
+    model_type: str
+    sliding_window_size: Optional[int] = 100
+
+class CreateModelPayload(BaseModel):
+    model_name: str 
+    model_description: Optional[str]
+    model_parameters: Optional[Dict]
+    sensor_id_list: Optional[List[int]]
+    model_type: Optional[str]
+
+class RunModelPayload(BaseModel):
+    model_name: str
+    sensor_id_list: List[int]
+    parameters: Any
     model_type: str
     sliding_window_size: Optional[int] = 100
