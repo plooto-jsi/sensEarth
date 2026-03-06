@@ -23,6 +23,7 @@ from .service import *
 from .utils import *
 from ..logger import logger
 
+
 CONFIG_DIR = os.path.abspath("configuration")
 DATA_DIR = os.path.abspath("data")
 
@@ -148,3 +149,13 @@ def list_sensor(sensor_id: int, db: Session = Depends(get_db)) -> Dict[str, Any]
     Display a specific registered sensor with its details.
     """
     return get_sensor(sensor_id, db)
+
+@router.get("/latestMeasurements")
+def latest_measurements(limit: int, db: Session = Depends(get_db)) -> Dict[str, Any]:
+    """
+    Retrieve the latest measurements for a given sensor.
+    Parameters:
+    - sensor_id: ID of the sensor to retrieve measurements for
+    - limit: Number of latest measurements to retrieve (default: 10)
+    """
+    return get_latest_measurements(limit, db)

@@ -77,5 +77,11 @@
     "prettier": "^3.4.1",
     "sass": "1.77.6"
   },
-  "packageManager": "yarn@4.6.0"
+  "packageManager": "yarn@4.6.0",
+  "description": "- [Demo](https://themewagon.github.io//)",
+  "main": "index.js",
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs"
 }

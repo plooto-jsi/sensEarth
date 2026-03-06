@@ -1,1 +1,4 @@
 *.sh text eol=lf
+
+# enforce LF in yarn.lock
+frontend/yarn.lock text eol=lf

@@ -1,7 +1,10 @@
 from logger import logger
 from sqlalchemy.orm import Session
 from sqlalchemy import text
-from psycopg2.extras import Json
+from psycopg2.extras import Json 
+import traceback
+from utils import *
+
 
 component_id_cache: dict[tuple[str, str], int] = {}
 
@@ -138,3 +141,12 @@ def save_heartbeat(payload: dict, db: Session):
     db.commit()
 
     return {"status": "heartbeat saved", "heartbeat_id": result.scalar()}
+
+def get_components_db(db: Session):
+    try:
+        rows = db.execute(text("SELECT * FROM components")).mappings().all()
+        return rows
+    except Exception as e:
+        logger.error(f"Error fetching components: {e}")
+        traceback.print_exc()
+        return []

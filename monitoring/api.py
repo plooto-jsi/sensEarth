@@ -3,11 +3,22 @@ from datetime import datetime
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 from fastapi import Depends, FastAPI
-from service import save_component, save_event, save_metric, save_heartbeat
+from service import *
 from logger import logger  
 from database_monitoring.database import get_db 
+from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI(title="WatchDog")
+
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 
 @app.post("/component")
 def component(payload: dict, db: Session = Depends(get_db)):
@@ -38,6 +49,10 @@ def metric(payload: dict, db: Session = Depends(get_db)):
 def system_status():
     logger.info("Status check received")
     return "OK"
+
+@app.get("/components")
+def get_components(db: Session = Depends(get_db)):
+    return get_components_db(db)
 
 @app.get("/test-db")
 def test(db: Session = Depends(get_db)):

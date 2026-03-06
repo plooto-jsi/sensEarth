@@ -636,7 +636,7 @@ def get_sensors(db: Session):
 
     rows = db.execute(
         text("""
-            SELECT s.sensor_id, s.sensor_label, s.sensor_hash, s.description, st.name AS sensor_type
+            SELECT s.sensor_id, s.sensor_label, s.location, st.name, s.status AS sensor_type
             FROM sensor s
             JOIN sensor_type st ON s.sensor_type_id = st.sensor_type_id
         """)
@@ -672,3 +672,29 @@ def get_sensor(sensor_id: int, db: Session):
         raise HTTPException(status_code=500, detail="Failed to fetch sensor")
 
     return row_to_dict(row)
+
+def get_latest_measurements(limit: int, db: Session):
+    """
+    Fetch the latest measurements from the database.
+    """
+    db_healthcheck(db)
+
+    try:
+        rows = db.execute(
+            text("""
+                SELECT sm.timestamp_utc, sm.value, s.sensor_id, s.sensor_label, s.location
+                FROM sensor_measurement sm INNER JOIN sensor s ON sm.sensor_id = s.sensor_id
+                ORDER BY sm.timestamp_utc DESC
+                LIMIT :limit
+            """),
+            {"limit": limit}
+        ).fetchall()
+
+        if not rows:
+            logger.info(f"No measurements found")
+            return []
+    except Exception as e:
+        logger.error("Error fetching sensor measurements", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to fetch sensor measurements")
+
+    return rows_to_dict(rows)
