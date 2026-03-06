@@ -54,6 +54,10 @@ def system_status():
 def get_components(db: Session = Depends(get_db)):
     return get_components_db(db)
 
+@app.get("/events")
+def get_events(db: Session = Depends(get_db)):
+    return get_events_db(db)
+
 @app.get("/test-db")
 def test(db: Session = Depends(get_db)):
     try:

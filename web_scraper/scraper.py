@@ -251,7 +251,6 @@ def load_configs(folder="configs", selected=None):
             configs.append((data["scraper_config"], data["mapping_config"]))
     return configs
  
-
 async def main():
     parser = argparse.ArgumentParser(description="Anomaly Detector CLI")
     parser.add_argument("--config", nargs="*", help="Specify which config(s) to use (none = all)")

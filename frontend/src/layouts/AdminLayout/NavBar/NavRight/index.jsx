@@ -32,9 +32,8 @@ export default function NavRight() {
       <ListGroup.Item as="li" bsPrefix=" " className="pc-h-item">
         <Dropdown className="drp-user">
           <Dropdown.Toggle as="a" variant="link" className="pc-head-link arrow-none me-0 user-name">
-            <img src={avatar2} alt="userimage" className="user-avatar" />
             <span>
-              <span className="user-name">Joseph William</span>
+              <span className="user-name">John Doe</span>
               <span className="user-desc">Administrator</span>
             </span>
           </Dropdown.Toggle>

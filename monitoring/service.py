@@ -150,3 +150,19 @@ def get_components_db(db: Session):
         logger.error(f"Error fetching components: {e}")
         traceback.print_exc()
         return []
+
+def get_events_db(db: Session):
+    try:
+        rows = db.execute(text("""
+            SELECT e., c.name AS component_name, c.instance_id AS component_instance_id
+            FROM events e
+            JOIN components c ON e.component_id = c.component_id
+            ORDER BY e.timestamp DESC
+            LIMIT 100
+        """)).mappings().all()
+        logger.info(f"Fetched {len(rows)} events from database")
+        return rows
+    except Exception as e:
+        logger.error(f"Error fetching events: {e}")
+        traceback.print_exc()
+        return []

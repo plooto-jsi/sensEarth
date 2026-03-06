@@ -6,7 +6,7 @@ import MainRoutes from './MainRoutes';
 import AdminLayout from 'layouts/AdminLayout';
 
 // render - landing page
-const DashboardSales = lazy(() => import('../views/dashboard/DashSales/index'));
+const DashboardSales = lazy(() => import('../views/dashboard/DashSales/index.jsx'));
 
 // ==============================|| ROUTING RENDER ||============================== //
 
@@ -24,7 +24,7 @@ const router = createBrowserRouter(
     },
     MainRoutes
   ],
-  { basename: import.meta.env.VITE_APP_BASE_NAME }
+  { basename: import.meta.env.VITE_APP_BASE_NAME || '/' }
 );
 
 export default router;

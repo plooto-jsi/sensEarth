@@ -4,7 +4,6 @@ import io
 import os
 import time
 
-
 MINIO_ENDPOINT     = os.getenv("MINIO_ENDPOINT", "minio:9000")
 MINIO_ACCESS_KEY   = os.getenv("MINIO_ACCESS_KEY", "minioadmin")
 MINIO_SECRET_KEY   = os.getenv("MINIO_SECRET_KEY", "minioadmin")
@@ -40,7 +39,6 @@ def upload_raw_data(object_name: str, data: bytes, content_type="application/oct
         content_type=content_type,
     )
     return object_name
-
 
 def download_raw_data(object_name: str) -> bytes:
     """Download raw file from MinIO."""

@@ -4,7 +4,6 @@ import datetime
 import hashlib
 import json
 
-
 init_bucket()   # ensure bucket exists once on import
 
 def calculate_content_hash(data: bytes) -> str:

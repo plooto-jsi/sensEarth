@@ -520,12 +520,12 @@ def get_models(db: Session):
 
     rows = db.execute(
         text("SELECT model_id, name, description, model_type FROM model")
-    ).fetchall()
+    ).mappings().fetchall()
 
     if not rows:
         logger.info("No models found in database")
 
-    return rows_to_dict(rows)
+    return rows
     
 def get_model(model_name: str, db: Session):
     """
@@ -537,7 +537,7 @@ def get_model(model_name: str, db: Session):
         row = db.execute(
             text("SELECT model_id, name, description, model_type, parameters FROM model WHERE name = :model_name"),
             {"model_name": model_name}
-        ).fetchone()
+        ).mappings().fetchone()
 
         if not row:
             logger.warning(f"Model '{model_name}' not found in database")
@@ -546,7 +546,7 @@ def get_model(model_name: str, db: Session):
         logger.error("Error fetching model", exc_info=True)
         raise HTTPException(status_code=500, detail="Failed to fetch model")
 
-    return row_to_dict(row)
+    return row
 
 def delete_models(db: Session) -> None:
     """
@@ -600,12 +600,12 @@ def get_nodes(db: Session):
 
     rows = db.execute(
         text("SELECT node_id, node_label, node_hash, description FROM sensor_node")
-    ).fetchall()
+    ).mappings().fetchall()
 
     if not rows:
         logger.info("No nodes found in database")
 
-    return rows_to_dict(rows)
+    return rows
 
 def get_node(node_id: int, db: Session):
     """
@@ -617,7 +617,7 @@ def get_node(node_id: int, db: Session):
         row = db.execute(
             text("SELECT node_id, node_label, node_hash, description FROM sensor_node WHERE node_id = :node_id"),
             {"node_id": node_id}
-        ).fetchone()
+        ).mappings().fetchone()
 
         if not row:
             logger.warning(f"Node with ID '{node_id}' not found in database")
@@ -626,7 +626,7 @@ def get_node(node_id: int, db: Session):
         logger.error("Error fetching node", exc_info=True)
         raise HTTPException(status_code=500, detail="Failed to fetch node")
 
-    return row_to_dict(row)
+    return row
 
 def get_sensors(db: Session):
     """
@@ -640,12 +640,12 @@ def get_sensors(db: Session):
             FROM sensor s
             JOIN sensor_type st ON s.sensor_type_id = st.sensor_type_id
         """)
-    ).fetchall()
+    ).mappings().fetchall()
 
     if not rows:
         logger.info("No sensors found in database")
 
-    return rows_to_dict(rows)
+    return rows
 
 def get_sensor(sensor_id: int, db: Session):
     """
@@ -662,7 +662,7 @@ def get_sensor(sensor_id: int, db: Session):
                 WHERE s.sensor_id = :sensor_id
             """),
             {"sensor_id": sensor_id}
-        ).fetchone()
+        ).mappings().fetchone()
 
         if not row:
             logger.warning(f"Sensor with ID '{sensor_id}' not found in database")
@@ -671,7 +671,7 @@ def get_sensor(sensor_id: int, db: Session):
         logger.error("Error fetching sensor", exc_info=True)
         raise HTTPException(status_code=500, detail="Failed to fetch sensor")
 
-    return row_to_dict(row)
+    return row
 
 def get_latest_measurements(limit: int, db: Session):
     """
@@ -688,7 +688,7 @@ def get_latest_measurements(limit: int, db: Session):
                 LIMIT :limit
             """),
             {"limit": limit}
-        ).fetchall()
+        ).mappings().fetchall()
 
         if not rows:
             logger.info(f"No measurements found")
@@ -697,4 +697,4 @@ def get_latest_measurements(limit: int, db: Session):
         logger.error("Error fetching sensor measurements", exc_info=True)
         raise HTTPException(status_code=500, detail="Failed to fetch sensor measurements")
 
-    return rows_to_dict(rows)
+    return rows

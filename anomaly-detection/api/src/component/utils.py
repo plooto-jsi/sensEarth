@@ -14,12 +14,6 @@ def create_location_params(longitude: Optional[float], latitude: Optional[float]
         return "ST_SetSRID(ST_MakePoint(:lon, :lat), 4326)", {"lon": longitude, "lat": latitude}
     return "NULL", {}
 
-def rows_to_dict(rows):
-    return [dict(r._mapping) for r in rows]
-    
-def row_to_dict(row):
-    return dict(row._mapping) if row else None
-
 def db_healthcheck(db: Session):
     try:
         db.execute(text("SELECT 1;"))

@@ -3,7 +3,7 @@ import { lazy } from 'react';
 import AdminLayout from 'layouts/AdminLayout';
 import GuestLayout from 'layouts/GuestLayout';
 
-const DashboardSales = lazy(() => import('../views/dashboard/DashSales/index'));
+const DashboardSales = lazy(() => import('../views/dashboard/DashSales/index.jsx'));
 
 const Typography = lazy(() => import('../views/ui-elements/basic/BasicTypography'));
 const Color = lazy(() => import('../views/ui-elements/basic/BasicColor'));

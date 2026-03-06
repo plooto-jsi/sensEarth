@@ -12,6 +12,8 @@ import TextField from '@mui/material/TextField';
 import api from '../../../api';
 import DialogContentText from '@mui/material/DialogContentText';
 import MonitoringDashboard from './monitoring';
+import ModelsDashboard from './models';
+import EventsDashboard from './events';
 
 //-----------------------|| DASHBOARD SENSEARTH ||-----------------------//
 export default function DashboardSales() {
@@ -84,8 +86,14 @@ return (
           )}
         </Card.Body>
       </Card>
-      <div className="container mt-4">
+    <div className="container mt-4">
       <MonitoringDashboard />
+    </div>
+    <div className="container mt-4">
+      <ModelsDashboard />
+    </div>
+    <div className="container mt-4">
+      <EventsDashboard   />
     </div>
     </Col>
   </Row>
