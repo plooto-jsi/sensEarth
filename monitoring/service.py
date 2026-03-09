@@ -154,7 +154,7 @@ def get_components_db(db: Session):
 def get_events_db(db: Session):
     try:
         rows = db.execute(text("""
-            SELECT e., c.name AS component_name, c.instance_id AS component_instance_id
+            SELECT e.*, c.name AS component_name, c.instance_id AS component_instance_id
             FROM events e
             JOIN components c ON e.component_id = c.component_id
             ORDER BY e.timestamp DESC

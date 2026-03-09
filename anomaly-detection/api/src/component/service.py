@@ -338,8 +338,8 @@ def create_model(payload: CreateModelPayload, db: Session):
                 "model_type": model_type,
                 "parameters": Json(model_parameters)
             }
-        ).fetchone()
-        model_dict = row_to_dict(row)
+        ).mappings().fetchone()
+        model_dict = dict(row)
         logger.info(f"Model '{model_name}' created model {model_dict}")
 
         # Optionally associate sensor
@@ -437,7 +437,7 @@ async def model_results(payload: Dict, MODEL_REGISTRY: Dict[str, Any], db: Sessi
     ).fetchone()
 
     if not row_model:
-        raise HTTPException(status_code=404, detail=f"Model '{model_name}' not found")
+        raise HTTPException(status_code=404, detail=f"Model '{model_name}' not found. Check the model name")
 
     model_id = row_model[0]
     model_type = row_model[1]
