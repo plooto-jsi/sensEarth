@@ -107,6 +107,17 @@ services:
     command: server /data --console-address ":9001"
     volumes:
       - ./docker_data/minio_data:/data
+    
+  frontend:
+    container_name: sensearth-frontend
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "3001:80"  
+    depends_on:
+      - middleware-api
+    restart: always
 
 
 volumes:
