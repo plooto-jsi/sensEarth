@@ -2,6 +2,19 @@
 //    13. Button css start
 // ============================
 
+.btn-icon-small {
+  width: 20px;
+  height: 20px;
+  i, svg {
+    width: 16px;
+    height: 16px;
+    font-size: 14px;
+  }
+  padding: 4px 8px !important; 
+  /* Ensure the button doesn't have a huge default width */
+  min-width: 0 !important;
+}
+
 .btn {
   font-size: 14px;
 

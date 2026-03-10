@@ -1,9 +1,16 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 
 export default function ChartSettingsDialog({ allSensors, selectedSensors, setSelectedSensors, days, setDays }) {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [tempDays, setTempDays] = useState(days);
   const [tempSelected, setTempSelected] = useState(selectedSensors);
+
+  useEffect(() => {
+    if (dialogOpen) {
+      setTempDays(days);
+      setTempSelected(selectedSensors);
+    }
+  }, [dialogOpen, days, selectedSensors]);
 
   const toggleSensor = id => {
     setTempSelected(prev =>
@@ -18,44 +25,59 @@ export default function ChartSettingsDialog({ allSensors, selectedSensors, setSe
   };
 
   return (
-    <div>
-      <button onClick={() => setDialogOpen(true)}>Settings</button>
+    <>
+      <button className="btn-open" onClick={() => setDialogOpen(true)}>
+        Settings
+      </button>
 
       {dialogOpen && (
-      <dialog open={dialogOpen} style={{ zIndex: 1000, padding: 20, width: 400 }}>
-        <h3>Chart Settings</h3>
+        <div className="modal-overlay" onClick={() => setDialogOpen(false)}>
+          <div className="settings-dialog" onClick={(e) => e.stopPropagation()}>
+            <h3 className="dialog-title">Chart Settings</h3>
 
-        <div>
-          <label>
-            Days back:
-            <input
-              type="number"
-              min={1}
-              max={365}
-              value={tempDays}
-              onChange={e => setTempDays(Number(e.target.value))}
-            />
-          </label>
-        </div>
-
-        <div style={{ maxHeight: 200, overflowY: "auto", border: "1px solid #ffffff", padding: 5, marginTop: 10 }}>
-          {allSensors.map(s => (
-            <label key={s.sensor_id} style={{ display: "block", marginBottom: 5 }}>
+            <div className="settings-section">
+              <label className="settings-label">Lookback Period</label>
               <input
-                type="checkbox"
-                checked={tempSelected.includes(s.sensor_id)}
-                onChange={() => toggleSensor(s.sensor_id)}
+                type="number"
+                className="number-input"
+                min={1}
+                max={365}
+                value={tempDays}
+                onChange={e => setTempDays(Number(e.target.value))}
               />
-              {s.sensor_label} ({s.sensor_id})
-            </label>
-          ))}
-        </div>
+            </div>
 
-        <div style={{ marginTop: 10 }}>
-          <button onClick={applySettings}>Apply</button>
-          <button onClick={() => setDialogOpen(false)} style={{ marginLeft: 10 }}>Cancel</button>
+            <div className="settings-section">
+              <label className="settings-label">Active Sensors</label>
+              <div className="sensor-scroll-area">
+                {allSensors.map(s => (
+                  <label key={s.sensor_id} className="sensor-item">
+                    <input
+                      type="checkbox"
+                      checked={tempSelected.includes(s.sensor_id)}
+                      onChange={() => toggleSensor(s.sensor_id)}
+                      style={{ marginRight: '12px' }}
+                    />
+                    <div className="sensor-info">
+                      <strong>{s.sensor_label}</strong>
+                      <span className="sensor-id">({s.sensor_id})</span>
+                    </div>
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            <div className="btn-group">
+              <button className="btn-cancel" onClick={() => setDialogOpen(false)}>
+                Cancel
+              </button>
+              <button className="btn-apply" onClick={applySettings}>
+                Apply
+              </button>
+            </div>
+          </div>
         </div>
-      </dialog> )}
-    </div>
+      )}
+    </>
   );
 }

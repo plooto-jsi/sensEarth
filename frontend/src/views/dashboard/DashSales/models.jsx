@@ -92,11 +92,12 @@ export default function ModelsDashboard() {
     <>
     <Card className="flat-card dashboard-component">
       <Card.Body>
-            <div className="d-flex justify-content-between align-items-center mb-3">
-            <h3 className="mb-0">Models</h3>
+            <div className="border-bottom d-flex justify-content-between align-items-center mb-3" > 
+            <h3>Models</h3>
             <div className="d-flex align-items-center">
               
               <IconButton 
+                className='btn-icon-small'
                 color="primary" 
                 onClick={() => setOpenDialog(true)}
               >
@@ -106,6 +107,7 @@ export default function ModelsDashboard() {
               <Button
                 startIcon={<DeleteIcon />}
                 color="error"
+                className='btn-icon-small'
                 onClick={async () => {
                   try {
                     if (confirm('Are you sure you want to delete all models?')) {
@@ -116,7 +118,6 @@ export default function ModelsDashboard() {
                     console.error(error);
                   }
                 }}
-                className="ms-2"
               >
               </Button>
             </div>
@@ -132,6 +133,7 @@ export default function ModelsDashboard() {
                   <tr>
                     <th>Name</th>
                     <th>Type</th>
+                    <th>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -149,11 +151,13 @@ export default function ModelsDashboard() {
                         <span style={{ flexGrow: 1, textAlign: "center" }}>
                           {model.name}
                         </span>
-
-                          <div style={{ display: "flex", gap: "8px" }}>
+                        </td>
+                        <td>{model.model_type || "N/A"}</td>
+                        <td><div style={{ display: "flex", gap: "8px" }}>
                             {/* Run Button */}
-                            <IconButton
+                            <IconButton 
                               color="primary"
+                              className='btn-icon-small'
                               onClick={async () => {
                                 try {
                                   if (confirm('Are you sure you want to run this model?')) {
@@ -176,9 +180,10 @@ export default function ModelsDashboard() {
                             </IconButton>
 
                             {/* Delete Button */}
-                            <Button
+                            <Button  
                               startIcon={<DeleteIcon />}
                               color="error"
+                              className='btn-icon-small'
                               onClick={async () => {
                                 try {
                                   if (confirm('Are you sure you want to delete this model?')) {
@@ -192,9 +197,7 @@ export default function ModelsDashboard() {
                               style={{ textTransform: "none" }}
                             >
                             </Button>
-                          </div>
-                        </td>
-                        <td>{model.model_type || "N/A"}</td>
+                          </div></td>
                       </tr>
                     ))
                   )}

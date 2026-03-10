@@ -24,7 +24,9 @@ export default function MonitoringDashboard() {
   return (
     <Card className="flat-card dashboard-component">
       <Card.Body>
-        <h3 className="mb-3">Monitoring Components</h3>
+        <div className="border-bottom d-flex justify-content-between align-items-center mb-3" > 
+          <h3>Monitoring Components</h3>
+        </div>
 
             {loading ? (
               <div className="text-center">
