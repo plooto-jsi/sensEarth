@@ -9,7 +9,7 @@
   box-shadow: var(--pc-header-shadow);
   backdrop-filter: blur(7px);
   position: fixed;
-  left: $sidebar-width;
+  left: 0;
   right: 0;
   z-index: 1025;
 
@@ -20,7 +20,7 @@
 
   .header-wrapper {
     display: flex;
-    padding: 0 30px;
+    padding: 0 15px;
   }
 
   .pc-h-item {
@@ -34,8 +34,8 @@
     color: var(--pc-header-color);
     display: inline-flex;
     align-items: center;
-    padding: 0.6rem 0.9rem;
-    margin: 0 5px;
+    padding: 0.4rem 0.6rem;
+    margin: 0 3px;
     border-radius: 4px;
     position: relative;
     font-weight: 500;

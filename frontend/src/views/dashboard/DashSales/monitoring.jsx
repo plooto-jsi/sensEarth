@@ -22,11 +22,9 @@ export default function MonitoringDashboard() {
   }, []);
 
   return (
-    <Row>
-      <Col md={12}>
-        <Card className="flat-card">
-          <Card.Body>
-            <h3 className="mb-3">Monitoring Components</h3>
+    <Card className="flat-card dashboard-component">
+      <Card.Body>
+        <h3 className="mb-3">Monitoring Components</h3>
 
             {loading ? (
               <div className="text-center">
@@ -74,7 +72,5 @@ export default function MonitoringDashboard() {
             )}
           </Card.Body>
         </Card>
-      </Col>
-    </Row>
   );
 }

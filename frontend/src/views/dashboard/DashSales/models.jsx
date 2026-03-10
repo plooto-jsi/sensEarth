@@ -89,11 +89,9 @@ export default function ModelsDashboard() {
   };
 
   return (
-    <Row>
-      <Col md={12}>
-        <Card className="flat-card">
-          <Card.Body>
-
+    <>
+    <Card className="flat-card dashboard-component">
+      <Card.Body>
             <div className="d-flex justify-content-between align-items-center mb-3">
             <h3 className="mb-0">Models</h3>
             <div className="d-flex align-items-center">
@@ -205,7 +203,6 @@ export default function ModelsDashboard() {
             )}
           </Card.Body>
         </Card>
-      </Col>
 
       {/* Add Model Dialog */}
       <Dialog open={openDialog} onClose={() => setOpenDialog(false)} maxWidth="sm" fullWidth>
@@ -279,7 +276,6 @@ export default function ModelsDashboard() {
           </Button>
         </DialogActions>
       </Dialog>
-
-    </Row>
+      </>
   );
 }

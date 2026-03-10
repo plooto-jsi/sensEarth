@@ -3,7 +3,6 @@ import { Outlet } from 'react-router-dom';
 
 // project imports
 import MobileHeader from './MobileHeader';
-import Navigation from './Navigation';
 import NavBar from './NavBar';
 import Breadcrumb from './Breadcrumb';
 import useWindowSize from 'hooks/useWindowSize';
@@ -37,7 +36,6 @@ export default function AdminLayout() {
     <>
       <MobileHeader />
       <NavBar />
-      <Navigation />
       <div className={containerClass.join(' ')}>
         <div className="pcoded-content">
           <>

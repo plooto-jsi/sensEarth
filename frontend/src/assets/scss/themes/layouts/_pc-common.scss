@@ -5,13 +5,13 @@
 .pc-container {
   position: relative;
   top: $header-height;
-  margin-left: $sidebar-width;
+  margin-left: 0;
   min-height: calc(100vh - #{$header-height});
 
   .pcoded-content {
-    padding-left: 30px;
-    padding-right: 30px;
-    padding-top: 30px;
+    padding-left: 15px;
+    padding-right: 15px;
+    padding-top: 15px;
   }
 
   .page-header + .row {
@@ -24,11 +24,11 @@
 
 .minimenu {
   .pc-container {
-    margin-left: $sidebar-collapsed-width;
+    margin-left: 0;
   }
 
   .page-header {
-    left: $sidebar-collapsed-width;
+    left: 0;
   }
 }
 
@@ -39,11 +39,11 @@
   display: flex;
   align-items: center;
   top: $header-height;
-  left: $sidebar-width;
+  left: 0;
   right: 0;
   z-index: 1023;
   min-height: 55px;
-  padding: 13px 30px;
+  padding: 8px 15px;
 
   .page-block {
     width: 100%;

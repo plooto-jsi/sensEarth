@@ -1,7 +1,7 @@
 import os
 import json
 import time
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Dict, Any, List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -636,7 +636,7 @@ def get_sensors(db: Session):
 
     rows = db.execute(
         text("""
-            SELECT s.sensor_id, s.sensor_label, s.location, st.name, s.status AS sensor_type
+            SELECT s.sensor_id, s.sensor_label, ST_AsGeoJSON(s.location) AS location, st.name, s.status AS sensor_type
             FROM sensor s
             JOIN sensor_type st ON s.sensor_type_id = st.sensor_type_id
         """)
@@ -673,22 +673,38 @@ def get_sensor(sensor_id: int, db: Session):
 
     return row
 
-def get_latest_measurements(limit: int, db: Session):
+def get_measurements(sensorIDs: List[int], days: int, limit: int, db: Session):
     """
-    Fetch the latest measurements from the database.
+    Fetch measurements for specific sensors from the database.
     """
     db_healthcheck(db)
 
     try:
-        rows = db.execute(
-            text("""
-                SELECT sm.timestamp_utc, sm.value, s.sensor_id, s.sensor_label, s.location
-                FROM sensor_measurement sm INNER JOIN sensor s ON sm.sensor_id = s.sensor_id
-                ORDER BY sm.timestamp_utc DESC
-                LIMIT :limit
-            """),
-            {"limit": limit}
-        ).mappings().fetchall()
+        if days > 0 and sensorIDs: # Measurements from last N days for specific sensors
+
+            time_threshold = datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(days=days)
+            rows = db.execute(
+                text("""
+                    SELECT sm.timestamp_utc, sm.value, s.sensor_id, s.sensor_label, ST_AsGeoJSON(s.location) AS location
+                    FROM sensor_measurement sm 
+                    INNER JOIN sensor s ON sm.sensor_id = s.sensor_id
+                    WHERE sm.sensor_id = ANY(:sensor_ids) AND sm.timestamp_utc >= :time_threshold
+                    ORDER BY sm.timestamp_utc DESC
+                """),
+                {"sensor_ids": sensorIDs, "time_threshold": time_threshold, "limit": limit}
+            ).mappings().fetchall()
+        
+        else:
+            # Return latest N measurements without time filtering
+            rows = db.execute(
+                text("""
+                    SELECT sm.timestamp_utc, sm.value, s.sensor_id, s.sensor_label, ST_AsGeoJSON(s.location) AS location
+                    FROM sensor_measurement sm INNER JOIN sensor s ON sm.sensor_id = s.sensor_id
+                    ORDER BY sm.timestamp_utc DESC
+                    LIMIT :limit
+                """),
+                {"limit": limit}
+            ).mappings().fetchall()
 
         if not rows:
             logger.info(f"No measurements found")

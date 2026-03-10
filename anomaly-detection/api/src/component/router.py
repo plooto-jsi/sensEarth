@@ -150,12 +150,13 @@ def list_sensor(sensor_id: int, db: Session = Depends(get_db)) -> Dict[str, Any]
     """
     return get_sensor(sensor_id, db)
 
-@router.get("/latestMeasurements")
-def latest_measurements(limit: int, db: Session = Depends(get_db)) -> Dict[str, Any]:
+@router.get("/measurements")
+def measurements(sensorIDs: Optional[List[int]] = Query(None), days: Optional[int] = 0, limit: Optional[int] = 10, db: Session = Depends(get_db)) -> Dict[str, Any]:
     """
     Retrieve the latest measurements for a given sensor.
     Parameters:
-    - sensor_id: ID of the sensor to retrieve measurements for
+    - sensorIDs: List of sensor IDs to retrieve measurements for
+    - days: Number of days to retrieve measurements for
     - limit: Number of latest measurements to retrieve (default: 10)
     """
-    return get_latest_measurements(limit, db)
+    return get_measurements(sensorIDs, days, limit, db)

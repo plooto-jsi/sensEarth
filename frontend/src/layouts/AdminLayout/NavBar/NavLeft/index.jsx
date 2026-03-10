@@ -9,6 +9,8 @@ import { Link } from 'react-router-dom';
 
 export default function NavLeft() {
   return (
+    <div className="nav-left-horizontal d-flex align-items-center gap-3">
+      
     <ListGroup as="ul" bsPrefix=" " className="list-unstyled">
       <Dropdown as="li" className="pc-h-item">
         <Dropdown.Toggle as="a" variant="link" className="pc-head-link arrow-none me-0 active ">
@@ -65,5 +67,20 @@ export default function NavLeft() {
         </Dropdown.Menu>
       </Dropdown>
     </ListGroup>
+    
+    {/* Dashboard webpage */}
+      <Link to="/dashboard/sales" className="text-decoration-none nav-item-link">
+        Dashboard
+      </Link>
+    {/* Monitoring webpage */}
+      <Link to="/dashboard/sales" className="text-decoration-none nav-item-link">
+        Monitoring
+      </Link>
+    {/* Models webpage */}
+      <Link to="/dashboard/sales" className="text-decoration-none nav-item-link">
+        Models
+      </Link>
+
+</div>
   );
 }

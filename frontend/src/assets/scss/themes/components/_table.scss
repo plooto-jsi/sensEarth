@@ -10,17 +10,27 @@
     }
   }
   thead th {
-    padding: 0.9rem 0.75rem;
+    padding: 0.3rem 0.2rem;
   }
   td,
   th {
     vertical-align: middle;
+    padding: 0.3rem 0.2rem;
+    width: auto;
+    white-space: nowrap;
   }
   &.table-borderless {
     td,
     th {
       border: none !important;
     }
+  }
+}
+
+// Override Bootstrap responsive table behavior
+.table-responsive {
+  table {
+    width: auto !important;
   }
 }
 
