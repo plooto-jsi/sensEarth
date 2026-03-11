@@ -80,9 +80,6 @@ export default function DashboardSales() {
 
 return (
   <div className="dashboard-grid">
-
-    <LatestMeasurementsDashboard sensors={sensors} loading={loading} />
-
     <LatestMeasurementsDashboard sensors={sensors} loading={loading} />
     <MonitoringDashboard />
     <ModelsDashboard />
