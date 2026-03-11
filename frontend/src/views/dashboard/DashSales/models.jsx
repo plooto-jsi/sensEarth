@@ -66,13 +66,14 @@ export default function ModelsDashboard() {
 
     const payload = {
       model_name: modelName,
-      description: description || null,
-      model_type: modelType || "anomaly_detection",
+      model_description: description || null,
+      model_type: modelType || "anomaly_detection_model",
       sensor_id_list: sensorIds.split(",").map(id => parseInt(id.trim())),
-      jsonconfig: parsedJson
+      model_parameters: parsedJson
     };
 
     try {
+      console.log("Registering model with payload:", payload);
       await api.post("/registerModel", payload);
       setOpenDialog(false);
 

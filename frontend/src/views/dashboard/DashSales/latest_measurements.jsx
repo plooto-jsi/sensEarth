@@ -1,7 +1,5 @@
 import { Row, Col, Card, Table, Spinner } from "react-bootstrap";
 
-
-//-----------------------|| DASHBOARD SENSEARTH ||-----------------------//
 export default function LatestMeasurementsDashboard({ sensors, loading }) {
 
 function parseAndFormatLocation(locationStr) {

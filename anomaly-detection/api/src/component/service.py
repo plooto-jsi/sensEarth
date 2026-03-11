@@ -448,12 +448,12 @@ async def model_results(payload: Dict, MODEL_REGISTRY: Dict[str, Any], db: Sessi
             {"model_id": model_id}
         ).fetchone()
 
-        parameters = row_params[0]
+        parameters = json.loads(row_params[0]) if isinstance(row_params[0], str) else row_params[0]
+        logger.info(f"Using stored parameters for model '{model_name}': {parameters}")
 
-    ModelClass = MODEL_REGISTRY.get(model_type)
+    ModelClass = MODEL_REGISTRY.get(model_type) 
     if not ModelClass:
         raise HTTPException(status_code=400, detail=f"Unsupported model type '{model_type}'")
-
 
     logger.info(f"Model ID for '{model_name}': {model_id}, Model Type: {model_type}")
 
@@ -495,9 +495,8 @@ async def model_results(payload: Dict, MODEL_REGISTRY: Dict[str, Any], db: Sessi
             {"sensor_id": sensor_id, "limit": sliding_window_size}
         ).fetchall()
 
-        logger.info(f"Fetched {len(sensor_data)} measurements for sensor_id {sensor_id}")
         model_instance.data_ingestion(sensor_data)
-        results[sensor_id] = model_instance.run()
+        results = model_instance.run()
         logger.info(f"Model run completed for sensor_id {sensor_id}")
 
     emit_event(
