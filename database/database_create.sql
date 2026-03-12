@@ -5,6 +5,8 @@ DROP TABLE IF EXISTS sensor_measurement CASCADE;
 DROP TABLE IF EXISTS sensor CASCADE;
 DROP TABLE IF EXISTS sensor_node CASCADE;
 DROP TABLE IF EXISTS sensor_type CASCADE;
+DROP TABLE IF EXISTS model_inference CASCADE;
+DROP TABLE IF EXISTS model_run CASCADE;
 
 -- ===============================
 -- 1. Enable extensions
@@ -93,6 +95,26 @@ CREATE TABLE model_sensor (
     sensor_id INT NOT NULL REFERENCES sensor(sensor_id) ON DELETE CASCADE,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     PRIMARY KEY (model_id, sensor_id)
+);
+
+CREATE TABLE IF NOT EXISTS model_run (
+    run_id SERIAL PRIMARY KEY,
+    model_id INT NOT NULL REFERENCES model(model_id) ON DELETE CASCADE,
+    started_at TIMESTAMPTZ DEFAULT NOW(),
+    finished_at TIMESTAMPTZ,
+    status VARCHAR(32),
+    notes TEXT
+);
+
+CREATE TABLE IF NOT EXISTS model_inference (
+    inference_id SERIAL PRIMARY KEY,
+    run_id INT NOT NULL REFERENCES model_run(run_id) ON DELETE CASCADE,
+    model_id INT NOT NULL REFERENCES model(model_id) ON DELETE CASCADE,
+    sensor_id INT NOT NULL REFERENCES sensor(sensor_id) ON DELETE CASCADE,
+    timestamp_utc TIMESTAMPTZ NOT NULL,
+    value DOUBLE PRECISION,
+    inference_message TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 -- ===============================

@@ -367,7 +367,7 @@ def create_model(payload: CreateModelPayload, db: Session):
                     logger.warning(
                         f"Sensor ID {sensor_id} not found. Model created without association."
                     )
-
+                    
         db.commit()
         model_dict["associated_sensors"] = len(associated_sensors)
 
@@ -412,6 +412,8 @@ async def model_results(payload: Dict, MODEL_REGISTRY: Dict[str, Any], db: Sessi
 
     emit_heartbeat(name="middleware", instance_id="default", status="OK")
     db_healthcheck(db)
+
+    started_at = datetime.datetime.now(datetime.timezone.utc)
 
     emit_event(
         name="middleware",
@@ -466,6 +468,7 @@ async def model_results(payload: Dict, MODEL_REGISTRY: Dict[str, Any], db: Sessi
         sensor_id_list = set([row[0] for row in sensor_ids])
 
     logger.info(f"Sensor IDs associated with model '{model_name}': {sensor_id_list}")
+
     results = {}
     for sensor_id in sensor_id_list:
         row_sensor = db.execute(
@@ -496,8 +499,55 @@ async def model_results(payload: Dict, MODEL_REGISTRY: Dict[str, Any], db: Sessi
         ).fetchall()
 
         model_instance.data_ingestion(sensor_data)
-        results = model_instance.run()
+
+        results[sensor_id] = model_instance.run() # Return ex. ([20510.8125, 174.0], ('Error: measurement above upper limit', -1)) , ....
         logger.info(f"Model run completed for sensor_id {sensor_id}")
+    
+    finished_at = datetime.datetime.now(datetime.timezone.utc)
+
+    model_run_row = db.execute(
+        text(f"""
+            INSERT INTO model_run (model_id, started_at, finished_at, status)
+            VALUES (:model_id, :started_at, :finished_at, :status)
+            RETURNING run_id
+        """),
+        {"model_id": model_id, "started_at": started_at, "finished_at": finished_at, "status": "completed"}
+    ).fetchone()
+
+    model_run_id = model_run_row[0]
+    logger.info(f"Created model run with ID {model_run_id} for model '{model_name}'")
+    
+    unix_epoch = datetime.datetime(1970, 1, 1, tzinfo=datetime.timezone.utc)
+    rows = []
+    
+    for sensor_id, sensor_results in results.items():
+        for entry in sensor_results:
+
+            timestamp_float = entry[0][0]
+            value = entry[0][1]
+            inference_message = entry[1][0]
+
+            timestamp_utc = unix_epoch + timedelta(days=timestamp_float)
+
+            rows.append({
+                "run_id": model_run_id,
+                "model_id": model_id,
+                "sensor_id": sensor_id,
+                "timestamp_utc": timestamp_utc,
+                "value": value,
+                "inference_message": inference_message
+            })
+
+        db.execute(
+            text("""
+                INSERT INTO model_inference
+                (run_id, model_id, sensor_id, timestamp_utc, value, inference_message)
+                VALUES
+                (:run_id, :model_id, :sensor_id, :timestamp_utc, :value, :inference_message)
+            """),
+            rows
+        )
+        db.commit()
 
     emit_event(
         name="middleware",

@@ -12,6 +12,7 @@ import IconButton from '@mui/material/IconButton';
 import DeleteIcon from '@mui/icons-material/Delete';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import api from '../../../api';
+import monitoring_api from "../../../monitoring_api"; 
 
 //-----------------------|| DASHBOARD SENSEARTH ||-----------------------//
 export default function ModelsDashboard() {
@@ -189,6 +190,7 @@ export default function ModelsDashboard() {
                                 try {
                                   if (confirm('Are you sure you want to delete this model?')) {
                                     await api.delete(`/models/${encodeURIComponent(model.name)}`);
+                                    await monitoring_api.delete(`/component?name=${encodeURIComponent(model.name)}&instance_id=${encodeURIComponent(model.instance_id)}`);
                                     fetchModels();
                                   }
                                 } catch (error) {

@@ -27,7 +27,6 @@ export default function MonitoringDashboard() {
         <div className="border-bottom d-flex justify-content-between align-items-center mb-3" > 
           <h3>Monitoring Components</h3>
         </div>
-
             {loading ? (
               <div className="text-center">
                 <Spinner animation="border" />

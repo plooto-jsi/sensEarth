@@ -25,7 +25,7 @@ CREATE TABLE components (
 
 CREATE TABLE heartbeats (
     heartbeat_id SERIAL PRIMARY KEY,
-    component_id INT REFERENCES components(component_id),
+    component_id INT REFERENCES components(component_id) ON DELETE CASCADE,
     timestamp TIMESTAMP DEFAULT NOW(),
     status heartbeat_status DEFAULT 'OK',
     metadata JSONB
@@ -33,7 +33,7 @@ CREATE TABLE heartbeats (
 
 CREATE TABLE metrics (
     metric_id SERIAL PRIMARY KEY,
-    component_id INT REFERENCES components(component_id),
+    component_id INT REFERENCES components(component_id) ON DELETE CASCADE,
     metric_name TEXT NOT NULL,
     value DOUBLE PRECISION,
     unit TEXT,
@@ -43,7 +43,7 @@ CREATE TABLE metrics (
 
 CREATE TABLE events (
     event_id SERIAL PRIMARY KEY,
-    component_id INT REFERENCES components(component_id),
+    component_id INT REFERENCES components(component_id) ON DELETE CASCADE,
     event_type TEXT NOT NULL,
     severity event_severity,
     message TEXT,
