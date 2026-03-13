@@ -243,8 +243,8 @@ def ingest_measurements(payload: dataIngestPayload, db: Session) -> Dict[str, An
             val = float(value)
             measurement_buffer.append((sensor_id_db, ts, val))
         except (TypeError, ValueError):
-                logger.warning(f"Skipping invalid measurement: {measurement}")
-                continue
+            logger.warning(f"Skipping invalid measurement: {measurement}")
+            continue
 
     if measurement_buffer:  
         conn = db.get_bind().raw_connection()  # get psycopg2 connection
@@ -286,13 +286,15 @@ def ingest_measurements(payload: dataIngestPayload, db: Session) -> Dict[str, An
 
 def create_model(payload: CreateModelPayload, db: Session):
     """
-    Create a new model and optionally associate it with a sensor.
+    Create a new model and optionally associate it with one or more sensors.
 
     Expected keys in payload:
     - model_name: str (required)
     - model_description: str (optional)
     - model_parameters: dict (optional, stored as JSONB)
     - sensor_id_list: list[int] (optional) Allows linking model to multiple sensors.
+
+    If a sensor association fails (e.g., sensor ID not found), the model is still created but not linked to that sensor.
 
     Returns:
     {
@@ -339,6 +341,12 @@ def create_model(payload: CreateModelPayload, db: Session):
                 "parameters": Json(model_parameters)
             }
         ).mappings().fetchone()
+
+        if not row:
+            raise HTTPException(status_code=500, detail="Failed to create model")
+        
+        emit_component_registration(name="anomaly_detection_model", instance_id=model_name, component_type="model")
+
         model_dict = dict(row)
         logger.info(f"Model '{model_name}' created model {model_dict}")
 
@@ -426,7 +434,6 @@ async def model_results(payload: Dict, MODEL_REGISTRY: Dict[str, Any], db: Sessi
 
     model_name = payload.get("model_name")
     sensor_id_list = set(payload.get("sensor_id_list", []))
-    parameters = payload.get("parameters", {})
     sliding_window_size = payload.get("sliding_window_size", 100)
 
     if not model_name:
@@ -444,14 +451,13 @@ async def model_results(payload: Dict, MODEL_REGISTRY: Dict[str, Any], db: Sessi
     model_id = row_model[0]
     model_type = row_model[1]
 
-    if not parameters:
-        row_params = db.execute(
-            text("SELECT parameters FROM model WHERE model_id = :model_id"),
-            {"model_id": model_id}
-        ).fetchone()
+    row_params = db.execute(
+        text("SELECT parameters FROM model WHERE model_id = :model_id"),
+        {"model_id": model_id}
+    ).fetchone()
 
-        parameters = json.loads(row_params[0]) if isinstance(row_params[0], str) else row_params[0]
-        logger.info(f"Using stored parameters for model '{model_name}': {parameters}")
+    parameters = json.loads(row_params[0]) if isinstance(row_params[0], str) else row_params[0]
+    logger.info(f"Using stored parameters for model '{model_name}': {parameters}")
 
     ModelClass = MODEL_REGISTRY.get(model_type) 
     if not ModelClass:
@@ -685,7 +691,7 @@ def get_sensors(db: Session):
 
     rows = db.execute(
         text("""
-            SELECT s.sensor_id, s.sensor_label, ST_AsGeoJSON(s.location) AS location, st.name, s.status AS sensor_type
+            SELECT s.sensor_id, s.sensor_label, ST_AsGeoJSON(s.location) AS location, st.name, s.status AS sensor_status
             FROM sensor s
             JOIN sensor_type st ON s.sensor_type_id = st.sensor_type_id
         """)

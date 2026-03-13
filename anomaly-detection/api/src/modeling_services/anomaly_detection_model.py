@@ -6,10 +6,10 @@ class AnomalyDetectionModel(BaseModel):
     def __init__(self, model_name, sensor_id, conf, sliding_window_size=100):
         super().__init__(model_name, sensor_id, conf, sliding_window_size)
 
-        emit_component_registration(name="anomaly_detection_model", instance_id=model_name, component_type="model")
         emit_heartbeat(name="anomaly_detection_model", instance_id=self.model_name, status="INITIALIZED")
 
     def data_ingestion(self, measurements):
+        self.data = []
         self.data = [
         {
             "timestamp": round(float(m.timestamp_utc.timestamp()) / 86400.0, 4), # Convert to days since epoch
@@ -17,6 +17,8 @@ class AnomalyDetectionModel(BaseModel):
         }
         for m in measurements
         ]
+
+        self.model_run = Test(conf=self.conf)
 
         emit_metric(
             name="anomaly_detection_model",
@@ -38,8 +40,7 @@ class AnomalyDetectionModel(BaseModel):
         emit_heartbeat(name="anomaly_detection_model", instance_id=self.model_name, status="OK")
 
         try:
-            self.detector = Test(conf=self.conf)
-            self.result = self.detector.read_streaming_data(self.data)
+            self.result = self.model_run.read_streaming_data(self.data)
 
             emit_metric(
                 name="anomaly_detection_model",

@@ -114,6 +114,14 @@ export default function ModelsDashboard() {
                   try {
                     if (confirm('Are you sure you want to delete all models?')) {
                       await api.delete('/models');
+                      // Delete all model components in monitoring system
+                      await Promise.all(
+                        models.map(model =>
+                          monitoring_api.delete(
+                            `/component?name=${encodeURIComponent(model.model_type)}&instance_id=${encodeURIComponent(model.name)}`
+                          )
+                        )
+                      );
                       fetchModels();
                     }
                   } catch (error) {
@@ -190,7 +198,9 @@ export default function ModelsDashboard() {
                                 try {
                                   if (confirm('Are you sure you want to delete this model?')) {
                                     await api.delete(`/models/${encodeURIComponent(model.name)}`);
-                                    await monitoring_api.delete(`/component?name=${encodeURIComponent(model.name)}&instance_id=${encodeURIComponent(model.instance_id)}`);
+                                    await monitoring_api.delete(
+                                      `/component?name=${encodeURIComponent(model.model_type)}&instance_id=${encodeURIComponent(model.name)}` // name of compoent is model_type and instance_id is model name
+                                    );
                                     fetchModels();
                                   }
                                 } catch (error) {

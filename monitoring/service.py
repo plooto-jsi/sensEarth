@@ -174,6 +174,7 @@ def delete_component_db(name: str, instance_id: str, db: Session):
         keys_to_delete = [key for key, cid in component_id_cache.items() if cid == component_id]
         for key in keys_to_delete:
             del component_id_cache[key]
+        logger.info(f"Deleted component {name}:{instance_id} and cleared {len(keys_to_delete)} cache entries")
         return {"status": "component deleted", "component_id": component_id}
     except Exception as e:
         logger.error(f"Error deleting component {component_id}: {e}")

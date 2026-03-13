@@ -19,13 +19,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-
 @app.post("/component")
 def component(payload: dict, db: Session = Depends(get_db)):
     payload["timestamp"] = datetime.utcnow()
     logger.info("Component received", payload)
     save_component(payload, db)
-
 
 @app.post("/heartbeat")
 def heartbeat(payload: dict, db: Session = Depends(get_db)):
