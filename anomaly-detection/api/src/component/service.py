@@ -24,6 +24,7 @@ from ..logger import logger
 
 from monitoring.client import emit_component_registration, emit_event, emit_metric, emit_heartbeat
 
+from sqlalchemy.exc import IntegrityError
 
 MODEL_REGISTRY = {
     "anomaly_detection_model": AnomalyDetectionModel,
@@ -90,8 +91,7 @@ def register_entities(payload: RegisterPayload, db: Session) -> Dict[str, Dict[s
                 }
             ).fetchone()[0]
 
-        except Exception as e:
-
+        except IntegrityError as e:
             emit_event(
                 name="middleware",
                 instance_id="default",

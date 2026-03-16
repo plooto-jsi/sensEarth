@@ -217,8 +217,8 @@ export default function ModelsDashboard() {
                 </tbody>
               </Table>
             )}
-          </Card.Body>
-        </Card>
+        </Card.Body>
+      </Card>
 
       {/* Add Model Dialog */}
       <Dialog open={openDialog} onClose={() => setOpenDialog(false)} maxWidth="sm" fullWidth>

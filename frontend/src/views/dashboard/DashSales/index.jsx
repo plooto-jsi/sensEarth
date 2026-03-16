@@ -36,7 +36,7 @@ export default function DashboardSales() {
   const [selectedSensors, setSelectedSensors] = useState([]);
   const [days, setDays] = useState(7);
   const [measurements, setMeasurements] = useState([]);
-  const [showSettings, setShowSettings] = useState(false);
+  const [chartReset, setChartReset] = useState(0);
 
   // Load all sensors once
   const fetchSensorsAll = async () => {
@@ -50,6 +50,13 @@ export default function DashboardSales() {
     }
     setLoading(false);
   };
+
+const resetChart = () => {
+  setSelectedSensors([]);
+  setDays(7);
+  setMeasurements([]);
+  setChartReset(v => v + 1);
+};
 
   useEffect(() => {
     fetchSensorsAll();
@@ -79,27 +86,36 @@ export default function DashboardSales() {
   }, []);
 
 return (
+  <>
+  <div className="intro-section">
+    <div className="intro-content">
+      <h1>SensEarth</h1>
+      <p>A digital twin of sensor data sources</p>
+    </div>
+  </div>
   <div className="dashboard-grid">
     <LatestMeasurementsDashboard sensors={sensors} loading={loading} />
-    <MonitoringDashboard />
-    <ModelsDashboard />
-    <EventsDashboard />
-
-  <Card className="card" style={{ gridColumn: "span 1" }}>
-    <Card.Body>
-        <ChartSettingsModal
-          allSensors={allSensors}
-          selectedSensors={selectedSensors}
-          setSelectedSensors={setSelectedSensors}
-          days={days}
-          setDays={setDays}
-          onClose={() => setShowSettings(false)}
-        />
+    
+    <Card className="flat-card" style={{ gridColumn: "span 1" }}>
+      <Card.Body>
+          <ChartSettingsModal
+            allSensors={allSensors}
+            selectedSensors={selectedSensors}
+            setSelectedSensors={setSelectedSensors}
+            days={days}
+            setDays={setDays}
+            onClose={() => setShowSettings(false)}
+            resetChart={resetChart}
+          />
+        
+        <SensorChart key={chartReset} measurements={measurements} />
+        </Card.Body>
+      </Card>
       
-      <SensorChart measurements={measurements} />
-      </Card.Body>
-    </Card>
+      <MonitoringDashboard />
+      <ModelsDashboard />
+      <EventsDashboard />
     </div>
-
+  </>
 );
 }

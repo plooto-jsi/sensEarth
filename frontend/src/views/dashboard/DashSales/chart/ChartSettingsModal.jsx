@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
+import { alignPropType } from "react-bootstrap/esm/types";
 
-export default function ChartSettingsDialog({ allSensors, selectedSensors, setSelectedSensors, days, setDays }) {
+export default function ChartSettingsDialog({ allSensors, selectedSensors, setSelectedSensors, days, setDays, resetChart }) {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [tempDays, setTempDays] = useState(days);
   const [tempSelected, setTempSelected] = useState(selectedSensors);
@@ -26,15 +27,23 @@ export default function ChartSettingsDialog({ allSensors, selectedSensors, setSe
 
   return (
     <>
+    <div className="border-bottom d-flex justify-content-between align-items-center mb-3" >
+      <h3 >Sensor data overview</h3>
+      <div style={{ marginLeft: "100px", marginBottom: "8px", gap: "8px", display: "flex" }}>
       <button className="btn-open" onClick={() => setDialogOpen(true)}>
         Settings
       </button>
-
+       <button
+              className="btn-open"
+              onClick={resetChart}>
+        Reset
+        </button>
+        </div>
+      </div>
       {dialogOpen && (
         <div className="modal-overlay" onClick={() => setDialogOpen(false)}>
           <div className="settings-dialog" onClick={(e) => e.stopPropagation()}>
             <h3 className="dialog-title">Chart Settings</h3>
-
             <div className="settings-section">
               <label className="settings-label">Lookback Period</label>
               <input
@@ -68,6 +77,9 @@ export default function ChartSettingsDialog({ allSensors, selectedSensors, setSe
             </div>
 
             <div className="btn-group">
+            <button className="btn-open" style={{marginRight: 'auto'}} onClick={() => { setSelectedSensors([]); setDays(7);}} >
+              Reset
+             </button>
               <button className="btn-cancel" onClick={() => setDialogOpen(false)}>
                 Cancel
               </button>
