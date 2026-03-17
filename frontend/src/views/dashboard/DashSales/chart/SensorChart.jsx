@@ -15,6 +15,7 @@ export default function SensorChart({ measurements }) {
       name: sensor_id,
       type: "line",
       showSymbol: false,
+      areaStyle: {opacity: 0.1},
       data: sensors[sensor_id].sort((a, b) => a[0] - b[0])
     }));
   }, [measurements]);
@@ -29,8 +30,8 @@ export default function SensorChart({ measurements }) {
   const option = {
     tooltip: { trigger: "axis" },
     legend: { type: "scroll" },
-    xAxis: { type: "time" },
-    yAxis: { type: "value", min, max },
+    xAxis: { type: "time", },
+    yAxis: { type: "value", min, max  },
     dataZoom: [{ type: "inside" }, { type: "slider" }],
     series
   };

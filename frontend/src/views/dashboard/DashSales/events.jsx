@@ -43,10 +43,11 @@ export default function EventsDashboard() {
   };
 
   return (
-    <Card className="flat-card dashboard-component">
+    <Card className="flat-card events-scroll">
       <Card.Body>
-        <h3 className="mb-3">Monitoring Events</h3>
-
+        <div className="border-bottom d-flex justify-content-between align-items-center mb-3" > 
+                <h3 className="mb-3">Monitoring Events</h3>
+              </div>
             {loading ? (
               <div className="text-center">
                 <Spinner animation="border" />

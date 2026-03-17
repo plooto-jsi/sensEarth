@@ -24,6 +24,7 @@ from ..logger import logger
 
 from monitoring.client import emit_component_registration, emit_event, emit_metric, emit_heartbeat
 
+from sqlalchemy.exc import IntegrityError
 
 MODEL_REGISTRY = {
     "anomaly_detection_model": AnomalyDetectionModel,
@@ -90,8 +91,7 @@ def register_entities(payload: RegisterPayload, db: Session) -> Dict[str, Dict[s
                 }
             ).fetchone()[0]
 
-        except Exception as e:
-
+        except IntegrityError as e:
             emit_event(
                 name="middleware",
                 instance_id="default",
@@ -243,8 +243,8 @@ def ingest_measurements(payload: dataIngestPayload, db: Session) -> Dict[str, An
             val = float(value)
             measurement_buffer.append((sensor_id_db, ts, val))
         except (TypeError, ValueError):
-                logger.warning(f"Skipping invalid measurement: {measurement}")
-                continue
+            logger.warning(f"Skipping invalid measurement: {measurement}")
+            continue
 
     if measurement_buffer:  
         conn = db.get_bind().raw_connection()  # get psycopg2 connection
@@ -286,13 +286,15 @@ def ingest_measurements(payload: dataIngestPayload, db: Session) -> Dict[str, An
 
 def create_model(payload: CreateModelPayload, db: Session):
     """
-    Create a new model and optionally associate it with a sensor.
+    Create a new model and optionally associate it with one or more sensors.
 
     Expected keys in payload:
     - model_name: str (required)
     - model_description: str (optional)
     - model_parameters: dict (optional, stored as JSONB)
     - sensor_id_list: list[int] (optional) Allows linking model to multiple sensors.
+
+    If a sensor association fails (e.g., sensor ID not found), the model is still created but not linked to that sensor.
 
     Returns:
     {
@@ -339,6 +341,12 @@ def create_model(payload: CreateModelPayload, db: Session):
                 "parameters": Json(model_parameters)
             }
         ).mappings().fetchone()
+
+        if not row:
+            raise HTTPException(status_code=500, detail="Failed to create model")
+        
+        emit_component_registration(name="anomaly_detection_model", instance_id=model_name, component_type="model")
+
         model_dict = dict(row)
         logger.info(f"Model '{model_name}' created model {model_dict}")
 
@@ -367,7 +375,7 @@ def create_model(payload: CreateModelPayload, db: Session):
                     logger.warning(
                         f"Sensor ID {sensor_id} not found. Model created without association."
                     )
-
+                    
         db.commit()
         model_dict["associated_sensors"] = len(associated_sensors)
 
@@ -413,6 +421,8 @@ async def model_results(payload: Dict, MODEL_REGISTRY: Dict[str, Any], db: Sessi
     emit_heartbeat(name="middleware", instance_id="default", status="OK")
     db_healthcheck(db)
 
+    started_at = datetime.datetime.now(datetime.timezone.utc)
+
     emit_event(
         name="middleware",
         instance_id="default",
@@ -424,7 +434,6 @@ async def model_results(payload: Dict, MODEL_REGISTRY: Dict[str, Any], db: Sessi
 
     model_name = payload.get("model_name")
     sensor_id_list = set(payload.get("sensor_id_list", []))
-    parameters = payload.get("parameters", {})
     sliding_window_size = payload.get("sliding_window_size", 100)
 
     if not model_name:
@@ -442,18 +451,17 @@ async def model_results(payload: Dict, MODEL_REGISTRY: Dict[str, Any], db: Sessi
     model_id = row_model[0]
     model_type = row_model[1]
 
-    if not parameters:
-        row_params = db.execute(
-            text("SELECT parameters FROM model WHERE model_id = :model_id"),
-            {"model_id": model_id}
-        ).fetchone()
+    row_params = db.execute(
+        text("SELECT parameters FROM model WHERE model_id = :model_id"),
+        {"model_id": model_id}
+    ).fetchone()
 
-        parameters = row_params[0]
+    parameters = json.loads(row_params[0]) if isinstance(row_params[0], str) else row_params[0]
+    logger.info(f"Using stored parameters for model '{model_name}': {parameters}")
 
-    ModelClass = MODEL_REGISTRY.get(model_type)
+    ModelClass = MODEL_REGISTRY.get(model_type) 
     if not ModelClass:
         raise HTTPException(status_code=400, detail=f"Unsupported model type '{model_type}'")
-
 
     logger.info(f"Model ID for '{model_name}': {model_id}, Model Type: {model_type}")
 
@@ -466,6 +474,7 @@ async def model_results(payload: Dict, MODEL_REGISTRY: Dict[str, Any], db: Sessi
         sensor_id_list = set([row[0] for row in sensor_ids])
 
     logger.info(f"Sensor IDs associated with model '{model_name}': {sensor_id_list}")
+
     results = {}
     for sensor_id in sensor_id_list:
         row_sensor = db.execute(
@@ -495,10 +504,56 @@ async def model_results(payload: Dict, MODEL_REGISTRY: Dict[str, Any], db: Sessi
             {"sensor_id": sensor_id, "limit": sliding_window_size}
         ).fetchall()
 
-        logger.info(f"Fetched {len(sensor_data)} measurements for sensor_id {sensor_id}")
         model_instance.data_ingestion(sensor_data)
-        results[sensor_id] = model_instance.run()
+
+        results[sensor_id] = model_instance.run() # Return ex. ([20510.8125, 174.0], ('Error: measurement above upper limit', -1)) , ....
         logger.info(f"Model run completed for sensor_id {sensor_id}")
+    
+    finished_at = datetime.datetime.now(datetime.timezone.utc)
+
+    model_run_row = db.execute(
+        text(f"""
+            INSERT INTO model_run (model_id, started_at, finished_at, status)
+            VALUES (:model_id, :started_at, :finished_at, :status)
+            RETURNING run_id
+        """),
+        {"model_id": model_id, "started_at": started_at, "finished_at": finished_at, "status": "completed"}
+    ).fetchone()
+
+    model_run_id = model_run_row[0]
+    logger.info(f"Created model run with ID {model_run_id} for model '{model_name}'")
+    
+    unix_epoch = datetime.datetime(1970, 1, 1, tzinfo=datetime.timezone.utc)
+    rows = []
+    
+    for sensor_id, sensor_results in results.items():
+        for entry in sensor_results:
+
+            timestamp_float = entry[0][0]
+            value = entry[0][1]
+            inference_message = entry[1][0]
+
+            timestamp_utc = unix_epoch + timedelta(days=timestamp_float)
+
+            rows.append({
+                "run_id": model_run_id,
+                "model_id": model_id,
+                "sensor_id": sensor_id,
+                "timestamp_utc": timestamp_utc,
+                "value": value,
+                "inference_message": inference_message
+            })
+
+        db.execute(
+            text("""
+                INSERT INTO model_inference
+                (run_id, model_id, sensor_id, timestamp_utc, value, inference_message)
+                VALUES
+                (:run_id, :model_id, :sensor_id, :timestamp_utc, :value, :inference_message)
+            """),
+            rows
+        )
+        db.commit()
 
     emit_event(
         name="middleware",
@@ -636,7 +691,7 @@ def get_sensors(db: Session):
 
     rows = db.execute(
         text("""
-            SELECT s.sensor_id, s.sensor_label, ST_AsGeoJSON(s.location) AS location, st.name, s.status AS sensor_type
+            SELECT s.sensor_id, s.sensor_label, ST_AsGeoJSON(s.location) AS location, st.name, s.status AS sensor_status
             FROM sensor s
             JOIN sensor_type st ON s.sensor_type_id = st.sensor_type_id
         """)

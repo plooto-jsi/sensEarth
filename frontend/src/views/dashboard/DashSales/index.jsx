@@ -6,28 +6,8 @@ import ModelsDashboard from './models';
 import EventsDashboard from './events';
 import SensorChart from "./chart/SensorChart";
 import ChartSettingsModal from "./chart/ChartSettingsModal";
+import LatestMeasurementsDashboard from './latest_measurements';
 //-----------------------|| DASHBOARD SENSEARTH ||-----------------------//
-function parseAndFormatLocation(locationStr) {
-  if (!locationStr) return "-";
-
-  try {
-    const loc = JSON.parse(locationStr);
-    if (!loc.coordinates || loc.coordinates.length < 2) return "-";
-    const [lon, lat, alt] = loc.coordinates;
-    return (
-      <a
-        href={`https://www.openstreetmap.org/?mlat=${lat}&mlon=${lon}`}
-        target="_blank"
-        rel="noopener noreferrer"
-      >
-        {lat.toFixed(5)}, {lon.toFixed(5)}
-        {alt ? ` (${alt.toFixed(1)} m)` : ""}
-      </a>
-    );
-  } catch (err) {
-    return "-";
-  }
-}
 
 async function fetchMeasurements(sensorIDs = [], days = 0) {
   try {
@@ -56,7 +36,7 @@ export default function DashboardSales() {
   const [selectedSensors, setSelectedSensors] = useState([]);
   const [days, setDays] = useState(7);
   const [measurements, setMeasurements] = useState([]);
-  const [showSettings, setShowSettings] = useState(false);
+  const [chartReset, setChartReset] = useState(0);
 
   // Load all sensors once
   const fetchSensorsAll = async () => {
@@ -71,6 +51,13 @@ export default function DashboardSales() {
     setLoading(false);
   };
 
+const resetChart = () => {
+  setSelectedSensors([]);
+  setDays(7);
+  setMeasurements([]);
+  setChartReset(v => v + 1);
+};
+
   useEffect(() => {
     fetchSensorsAll();
   }, []);
@@ -78,8 +65,7 @@ export default function DashboardSales() {
   // Fetch measurements whenever selectedSensors or days change
   useEffect(() => {
     if (selectedSensors.length === 0) return;
-
-    fetchMeasurements(selectedSensors, days)
+      fetchMeasurements(selectedSensors, days)
       .then(data => setMeasurements(data))
       .catch(err => console.error(err));
   }, [selectedSensors, days]);
@@ -100,77 +86,36 @@ export default function DashboardSales() {
   }, []);
 
 return (
+  <>
+  <div className="intro-section">
+    <div className="intro-content">
+      <h1>SensEarth</h1>
+      <p>A digital twin of sensor data sources</p>
+    </div>
+  </div>
   <div className="dashboard-grid">
+    <LatestMeasurementsDashboard sensors={sensors} loading={loading} />
     
-
-      <Card className="flat-card">
-        <Card.Body>
-          <h3 className="mb-3">Sensor Measurements</h3>
-
-          {loading ? (
-            <div className="text-center">
-              <Spinner animation="border" />
-            </div>
-          ) : (
-            <Table striped bordered hover responsive>
-              <thead>
-                <tr>
-                  <th>Sensor</th>
-                  <th>Timestamp</th>
-                  <th>Location</th>
-                  <th>Value</th>
-                </tr>
-              </thead>
-
-              <tbody>
-                {sensors.length === 0 ? (
-                  <tr>
-                    <td colSpan="4" className="text-center">
-                      No measurements found
-                    </td>
-                  </tr>
-                ) : (
-                  sensors.map((sensor, index) => (
-                    <tr key={`${sensor.sensor_id}-${sensor.timestamp_utc}-${index}`}>
-                      <td>
-                        {sensor.sensor_label} ({sensor.sensor_id})
-                      </td>
-
-                      <td>
-                        {new Date(sensor.timestamp_utc).toLocaleString()}
-                      </td>
-                      <td>{parseAndFormatLocation(sensor.location)}</td>            
-                  <td>{sensor.value}</td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </Table>
-          )}
+    <Card className="flat-card" style={{ gridColumn: "span 1" }}>
+      <Card.Body>
+          <ChartSettingsModal
+            allSensors={allSensors}
+            selectedSensors={selectedSensors}
+            setSelectedSensors={setSelectedSensors}
+            days={days}
+            setDays={setDays}
+            onClose={() => setShowSettings(false)}
+            resetChart={resetChart}
+          />
+        
+        <SensorChart key={chartReset} measurements={measurements} />
         </Card.Body>
       </Card>
-  {/* Flexible dashboard components grid */}
-    <MonitoringDashboard />
-    <ModelsDashboard />
-    <EventsDashboard />
-
-
-  <Card className="card" style={{ gridColumn: "span 1" }}>
-      <Card.Body>
-        <h3 className="mb-3">Sensor Data Chart</h3>
-        <ChartSettingsModal
-          allSensors={allSensors}
-          selectedSensors={selectedSensors}
-          setSelectedSensors={setSelectedSensors}
-          days={days}
-          setDays={setDays}
-          onClose={() => setShowSettings(false)}
-        />
       
-      <SensorChart measurements={measurements} />
-      </Card.Body>
-    </Card>
+      <MonitoringDashboard />
+      <ModelsDashboard />
+      <EventsDashboard />
     </div>
-
+  </>
 );
 }

@@ -19,13 +19,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-
 @app.post("/component")
 def component(payload: dict, db: Session = Depends(get_db)):
     payload["timestamp"] = datetime.utcnow()
     logger.info("Component received", payload)
     save_component(payload, db)
-
 
 @app.post("/heartbeat")
 def heartbeat(payload: dict, db: Session = Depends(get_db)):
@@ -57,6 +55,10 @@ def get_components(db: Session = Depends(get_db)):
 @app.get("/events")
 def get_events(db: Session = Depends(get_db)):
     return get_events_db(db)
+
+@app.delete("/component")
+def delete_component(name: str, instance_id: str, db: Session = Depends(get_db)):
+    return delete_component_db(name, instance_id, db)
 
 @app.get("/test-db")
 def test(db: Session = Depends(get_db)):

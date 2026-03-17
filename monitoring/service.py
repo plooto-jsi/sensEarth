@@ -118,7 +118,6 @@ def save_metric(payload: dict, db: Session):
 
     return {"status": "metric saved", "metric_id": result.scalar()}
 
-
 def save_heartbeat(payload: dict, db: Session):
     component_id = get_component_id(payload["name"], payload["instance_id"], db)
 
@@ -166,3 +165,18 @@ def get_events_db(db: Session):
         logger.error(f"Error fetching events: {e}")
         traceback.print_exc()
         return []
+
+def delete_component_db(name: str, instance_id: str, db: Session):
+    try:
+        db.execute(text("DELETE FROM components WHERE name = :name AND instance_id = :instance_id"), {"name": name, "instance_id": instance_id})
+        db.commit()
+        component_id = component_id_cache.get((name, instance_id))
+        keys_to_delete = [key for key, cid in component_id_cache.items() if cid == component_id]
+        for key in keys_to_delete:
+            del component_id_cache[key]
+        logger.info(f"Deleted component {name}:{instance_id} and cleared {len(keys_to_delete)} cache entries")
+        return {"status": "component deleted", "component_id": component_id}
+    except Exception as e:
+        logger.error(f"Error deleting component {component_id}: {e}")
+        traceback.print_exc()
+        return {"status": "error", "details": str(e)}

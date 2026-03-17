@@ -159,9 +159,10 @@ class Scraper:
             node["node_hash"] = node.get("node_hash") or self.stable_hash(node)
             for sensor in record.get("sensors", []):
                 if "sensor_hash" not in sensor:
+                    st_name = sensor.get("sensor_type", {}).get("name")
                     sensor["sensor_hash"] = self.stable_hash({
                         "node_hash": node["node_hash"],
-                        "sensor_type": sensor.get("sensor_label"),
+                        "sensor_type": st_name,
                         "longitude": sensor.get("longitude"),
                         "latitude": sensor.get("latitude"),
                         "altitude": sensor.get("altitude") # Fix if sensor.get("altitude") is not None 

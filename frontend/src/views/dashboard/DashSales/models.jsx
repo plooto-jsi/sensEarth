@@ -12,12 +12,13 @@ import IconButton from '@mui/material/IconButton';
 import DeleteIcon from '@mui/icons-material/Delete';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import api from '../../../api';
+import monitoring_api from "../../../monitoring_api";
 
-//-----------------------|| DASHBOARD SENSEARTH ||-----------------------//
 export default function ModelsDashboard() {
 
   const [models, setModels] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [logs, setLogs] = useState([]);
 
   const [openDialog, setOpenDialog] = useState(false);
 
@@ -25,19 +26,35 @@ export default function ModelsDashboard() {
   const [description, setDescription] = useState("");
   const [modelType, setModelType] = useState("anomaly_detection_model");
   const [sensorIds, setSensorIds] = useState("1,2,3");
+  const [results, setResults] = useState()
+  const [modelResults, setModelResults] = useState(null);
   const [jsonConfig, setJsonConfig] = useState(`{
   "anomaly_detection_alg": ["BorderCheck()"],
   "anomaly_detection_conf": [
     {
       "input_vector_size": 1,
-      "warning_stages": [2.5, 0.0],
-      "UL": 3.0,
-      "LL": -0.4,
+      "warning_stages": [90, 5],
+      "UL": 100,
+      "LL": 0,
       "output": ["TerminalOutput()"],
       "output_conf": [{}]
     }
   ]
 }`);
+
+  const transformResults = (results) => {
+    return Object.entries(results).map(([sensorId, entries]) => {
+      return {
+        sensorId,
+        rows: entries.map(([measurement, result]) => ({
+          timestamp: measurement[0],
+          value: measurement[1],
+          message: result[0],
+          code: result[1]
+        }))
+      };
+    });
+  };
 
   const fetchModels = async () => {
     try {
@@ -66,13 +83,14 @@ export default function ModelsDashboard() {
 
     const payload = {
       model_name: modelName,
-      description: description || null,
-      model_type: modelType || "anomaly_detection",
+      model_description: description || null,
+      model_type: modelType || "anomaly_detection_model",
       sensor_id_list: sensorIds.split(",").map(id => parseInt(id.trim())),
-      jsonconfig: parsedJson
+      model_parameters: parsedJson
     };
 
     try {
+      console.log("Registering model with payload:", payload);
       await api.post("/registerModel", payload);
       setOpenDialog(false);
 
@@ -90,37 +108,48 @@ export default function ModelsDashboard() {
 
   return (
     <>
-    <Card className="flat-card dashboard-component">
-      <Card.Body>
-            <div className="d-flex justify-content-between align-items-center mb-3">
-            <h3 className="mb-0">Models</h3>
-            <div className="d-flex align-items-center">
-              
-              <IconButton 
-                color="primary" 
-                onClick={() => setOpenDialog(true)}
-              >
-                <AddIcon />
-              </IconButton>
 
-              <Button
-                startIcon={<DeleteIcon />}
-                color="error"
-                onClick={async () => {
-                  try {
-                    if (confirm('Are you sure you want to delete all models?')) {
-                      await api.delete('/models');
-                      fetchModels();
+      <Card className="flat-card dashboard-component ">
+        <Card.Body>
+          <Card> 
+            <Card.Body>
+            <div className="border-bottom d-flex justify-content-between align-items-center mb-3" >
+              <h3>Models</h3>
+              <div className="d-flex align-items-center">
+                <IconButton
+                  className='btn-icon-small'
+                  color="primary"
+                  onClick={() => setOpenDialog(true)}
+                >
+                  <AddIcon />
+                </IconButton>
+
+                <Button
+                  startIcon={<DeleteIcon />}
+                  color="error"
+                  className='btn-icon-small'
+                  onClick={async () => {
+                    try {
+                      if (confirm('Are you sure you want to delete all models?')) {
+                        await api.delete('/models');
+                        // Delete all model components in monitoring system
+                        await Promise.all(
+                          models.map(model =>
+                            monitoring_api.delete(
+                              `/component?name=${encodeURIComponent(model.model_type)}&instance_id=${encodeURIComponent(model.name)}`
+                            )
+                          )
+                        );
+                        fetchModels();
+                      }
+                    } catch (error) {
+                      console.error(error);
                     }
-                  } catch (error) {
-                    console.error(error);
-                  }
-                }}
-                className="ms-2"
-              >
-              </Button>
+                  }}
+                >
+                </Button>
+              </div>
             </div>
-          </div>
 
             {loading ? (
               <div className="text-center">
@@ -132,6 +161,7 @@ export default function ModelsDashboard() {
                   <tr>
                     <th>Name</th>
                     <th>Type</th>
+                    <th>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -144,57 +174,69 @@ export default function ModelsDashboard() {
                   ) : (
                     models.map((model) => (
                       <tr key={model.models_id}>
-                        
+
                         <td style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                        <span style={{ flexGrow: 1, textAlign: "center" }}>
-                          {model.name}
-                        </span>
-
-                          <div style={{ display: "flex", gap: "8px" }}>
-                            {/* Run Button */}
-                            <IconButton
-                              color="primary"
-                              onClick={async () => {
-                                try {
-                                  if (confirm('Are you sure you want to run this model?')) {
-                                    const payload = {
-                                      model_name: model.name, 
-                                      // Optional fields:
-                                      // sensor_id: 1, 2, 3, ....
-                                      // parameters: {...}
-                                    };
-
-                                    await api.post(`/runModel`, payload);
-                                    fetchModels();
-                                  }
-                                } catch (error) {
-                                  console.error(error);
-                                }
-                              }}
-                            >
-                              <PlayArrowIcon />
-                            </IconButton>
-
-                            {/* Delete Button */}
-                            <Button
-                              startIcon={<DeleteIcon />}
-                              color="error"
-                              onClick={async () => {
-                                try {
-                                  if (confirm('Are you sure you want to delete this model?')) {
-                                    await api.delete(`/models/${encodeURIComponent(model.name)}`);
-                                    fetchModels();
-                                  }
-                                } catch (error) {
-                                  console.error(error);
-                                }
-                              }}
-                              style={{ textTransform: "none" }}
-                            >
-                            </Button>
-                          </div>
+                          <span style={{ flexGrow: 1, textAlign: "center" }}>
+                            {model.name}
+                          </span>
                         </td>
                         <td>{model.model_type || "N/A"}</td>
+                        <td><div style={{ display: "flex", gap: "8px" }}>
+                          {/* Run Button */}
+                          <IconButton
+                            color="primary"
+                            className='btn-icon-small'
+                            onClick={async () => {
+                              try {
+                                if (confirm('Are you sure you want to run this model?')) {
+                                  const payload = {
+                                    model_name: model.name,
+                                    // Optional fields:
+                                    // sensor_id: 1, 2, 3, ....
+                                    // parameters: {...}
+                                  };
+
+                                  const res = await api.post(`/runModel`, payload);
+
+                                  setModelResults(res.data);
+                                  setLogs(prev => [
+                                    ...prev,
+                                    `> Running ${model.name}...`,
+                                    `✔ Model finished`
+                                  ]);
+
+                                  fetchModels();
+                                }
+                              } catch (error) {
+                                console.error(error);
+                              }
+                            }}
+                          >
+                            <PlayArrowIcon />
+                          </IconButton>
+
+                          {/* Delete Button */}
+                          <Button
+                            startIcon={<DeleteIcon />}
+                            color="error"
+                            className='btn-icon-small'
+                            onClick={async () => {
+                              try {
+                                if (confirm('Are you sure you want to delete this model?')) {
+                                  await api.delete(`/models/${encodeURIComponent(model.name)}`);
+                                  await monitoring_api.delete(
+                                    `/component?name=${encodeURIComponent(model.model_type)}&instance_id=${encodeURIComponent(model.name)}` // name of compoent is model_type and instance_id is model name
+                                  );
+                                  fetchModels();
+                                }
+                              } catch (error) {
+                                console.error(error);
+                              }
+                            }}
+                            style={{ textTransform: "none" }}
+                          >
+                          </Button>
+                        </div></td>
                       </tr>
                     ))
                   )}
@@ -202,7 +244,67 @@ export default function ModelsDashboard() {
               </Table>
             )}
           </Card.Body>
-        </Card>
+          </Card>
+
+          <Card className="flat-card scroll-area">
+            <Card.Body>
+              <h5>Model results</h5>
+
+              {modelResults && (
+                <Card className="mt-3">
+                  <Card.Body>
+                    <div className="model-results-container">
+                        {transformResults(modelResults.results).map(sensor => {
+                          const errors = sensor.rows.filter(r => r.code === -1).length;
+                          return (
+                            <div key={sensor.sensorId} className="sensor-block">
+
+                              {/* Header */}
+                              <div className="sensor-header">
+                                Sensor {sensor.sensorId} | {errors}/{sensor.rows.length} errors
+                              </div>
+
+                              {/* Table */}
+                              <div className="sensor-table">
+                                {sensor.rows.slice(0, 15).map((row, i) => (
+                                  <div key={i} className="sensor-row">
+                                    <span className="sensor-cell">
+                                      {row.timestamp.toFixed(2)}
+                                    </span>
+                                    <span className="sensor-cell">
+                                      {row.value}
+                                    </span>
+                                    {row.message === "OK" ? (
+                                      <span className="sensor-cell sensor-success">
+                                        {row.message}
+                                      </span>
+                                    ) : row.message.includes("Warning") ? (
+                                      <span className="sensor-cell sensor-warning">
+                                        {row.message}
+                                      </span>
+                                    ) : (
+                                      <span className="sensor-cell sensor-error">
+                                        {row.message}
+                                      </span>
+                                    )}
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                  </Card.Body>
+                </Card>
+              )}
+            </Card.Body>
+          </Card>
+
+        </Card.Body>
+      </Card>
+
+
+
 
       {/* Add Model Dialog */}
       <Dialog open={openDialog} onClose={() => setOpenDialog(false)} maxWidth="sm" fullWidth>
@@ -276,6 +378,6 @@ export default function ModelsDashboard() {
           </Button>
         </DialogActions>
       </Dialog>
-      </>
+    </>
   );
 }
