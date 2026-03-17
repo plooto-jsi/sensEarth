@@ -58,7 +58,7 @@ export default function ChartSettingsDialog({ allSensors, selectedSensors, setSe
 
             <div className="settings-section">
               <label className="settings-label">Active Sensors</label>
-              <div className="sensor-scroll-area">
+              <div className="scroll-area">
                 {allSensors.map(s => (
                   <label key={s.sensor_id} className="sensor-item">
                     <input
