@@ -69,7 +69,8 @@ export default function ChartSettingsDialog({ allSensors, selectedSensors, setSe
                     />
                     <div className="sensor-info">
                       <strong>{s.sensor_label}</strong>
-                      <span className="sensor-id">({s.sensor_id})</span>
+                      <span> {s.name} </span>
+                       <span className="sensor-id">({s.sensor_id})</span>
                     </div>
                   </label>
                 ))}

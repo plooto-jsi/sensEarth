@@ -20,7 +20,7 @@
 
     "sensors": [
       {
-        "sensor_label": "water_level",
+        "sensor_label": "ime_kratko",
         "sensor_name": "ARSO Water Level Sensor",
         "longitude": "wgs84_dolzina",
         "latitude": "wgs84_sirina",
@@ -38,7 +38,7 @@
         }
       },
       {
-        "sensor_label": "water_temperature",
+        "sensor_label": "ime_kratko",
         "sensor_name": "ARSO Water Temperature Sensor",
         "longitude": "wgs84_dolzina",
         "latitude": "wgs84_sirina",

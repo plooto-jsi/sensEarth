@@ -164,9 +164,10 @@ def register_entities(payload: RegisterPayload, db: Session) -> Dict[str, Dict[s
         q_sensor = text(f"""
             INSERT INTO sensor (node_id, sensor_type_id, sensor_hash, sensor_label, location, description, last_seen)
             VALUES (:node_id, :stype_id, :hash, :label, {loc_sql}, :desc, NOW())
-            ON CONFLICT (sensor_hash)
+            ON CONFLICT (node_id, sensor_hash)
             DO UPDATE SET
-                last_seen = NOW()
+                last_seen = NOW(),
+                sensor_label = EXCLUDED.sensor_label
             RETURNING sensor_id
         """)
 
@@ -183,7 +184,7 @@ def register_entities(payload: RegisterPayload, db: Session) -> Dict[str, Dict[s
                 }
             ).fetchone()[0]
 
-        except Exception as e:
+        except IntegrityError as e:
             emit_event(
                 name="middleware",
                 instance_id="default",

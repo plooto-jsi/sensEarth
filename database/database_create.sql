@@ -53,8 +53,8 @@ CREATE TABLE IF NOT EXISTS sensor (
     location GEOGRAPHY(PointZ, 4326),
     last_seen TIMESTAMPTZ DEFAULT NOW(),
     status VARCHAR(32) DEFAULT 'active',
-    metadata JSONB,
-    UNIQUE(node_id, sensor_label)
+    metadata JSONB, 
+    UNIQUE(node_id, sensor_hash) 
 );
 
 -- ===============================
