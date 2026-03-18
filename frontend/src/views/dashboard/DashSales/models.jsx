@@ -14,7 +14,7 @@ import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import api from '../../../api';
 import monitoring_api from "../../../monitoring_api";
 
-export default function ModelsDashboard() {
+export default function ModelsDashboard( {setModelsUpdated} ) {
 
   const [models, setModels] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -94,6 +94,8 @@ export default function ModelsDashboard() {
       await api.post("/registerModel", payload);
       setOpenDialog(false);
 
+      setModelsUpdated(v => v + 1);
+
       setModelName("");
       setDescription("");
       setJsonConfig("{}");
@@ -108,7 +110,6 @@ export default function ModelsDashboard() {
 
   return (
     <>
-
       <Card className="flat-card dashboard-component ">
         <Card.Body>
           <Card> 
@@ -140,6 +141,7 @@ export default function ModelsDashboard() {
                             )
                           )
                         );
+                        setModelsUpdated(v => v + 1);
                         fetchModels();
                       }
                     } catch (error) {
@@ -227,6 +229,7 @@ export default function ModelsDashboard() {
                                   await monitoring_api.delete(
                                     `/component?name=${encodeURIComponent(model.model_type)}&instance_id=${encodeURIComponent(model.name)}` // name of compoent is model_type and instance_id is model name
                                   );
+                                  setModelsUpdated(v => v + 1);
                                   fetchModels();
                                 }
                               } catch (error) {

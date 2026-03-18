@@ -38,6 +38,9 @@ export default function DashboardSales() {
   const [measurements, setMeasurements] = useState([]);
   const [chartReset, setChartReset] = useState(0);
 
+  // If specific component was updated, then refresh 
+  const [modelsUpdated, setModelsUpdated] = useState(0); 
+
   // Load all sensors once
   const fetchSensorsAll = async () => {
     try {
@@ -95,7 +98,6 @@ return (
   </div>
   <div className="dashboard-grid">
     <LatestMeasurementsDashboard sensors={sensors} loading={loading} />
-    
     <Card className="flat-card" style={{ gridColumn: "span 1" }}>
       <Card.Body>
           <ChartSettingsModal
@@ -107,13 +109,12 @@ return (
             onClose={() => setShowSettings(false)}
             resetChart={resetChart}
           />
-        
         <SensorChart key={chartReset} measurements={measurements} />
         </Card.Body>
       </Card>
       
-      <MonitoringDashboard />
-      <ModelsDashboard />
+      <MonitoringDashboard modelsUpdated={modelsUpdated}/>
+      <ModelsDashboard setModelsUpdated={setModelsUpdated}/>
       <EventsDashboard />
     </div>
   </>

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Row, Col, Card, Table, Spinner } from "react-bootstrap";
 import monitoring_api from "../../../monitoring_api"; 
 
-export default function MonitoringDashboard() {
+export default function MonitoringDashboard( {modelsUpdated} ) {
   const [components, setComponents] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -19,7 +19,7 @@ export default function MonitoringDashboard() {
 
   useEffect(() => {
     fetchComponents();
-  }, []);
+  }, [modelsUpdated ]);
 
   return (
     <Card className="flat-card dashboard-component">
@@ -32,7 +32,7 @@ export default function MonitoringDashboard() {
                 <Spinner animation="border" />
               </div>
             ) : (
-              <Table striped bordered hover responsive>
+              <Table className="sensor-table">
                 <thead>
                   <tr>
                     <th>Name</th>

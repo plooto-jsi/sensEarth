@@ -4,7 +4,6 @@ export default function LatestMeasurementsDashboard({ sensors, loading }) {
 
 function parseAndFormatLocation(locationStr) {
   if (!locationStr) return "-";
-
   try {
     const loc = JSON.parse(locationStr);
     if (!loc.coordinates || loc.coordinates.length < 2) return "-";
@@ -36,7 +35,7 @@ function parseAndFormatLocation(locationStr) {
                   <Spinner animation="border" />
                 </div>
               ) : (
-                <Table striped bordered hover responsive>
+                <Table className="sensor-table">
                   <thead>
                     <tr>
                       <th>Sensor</th>

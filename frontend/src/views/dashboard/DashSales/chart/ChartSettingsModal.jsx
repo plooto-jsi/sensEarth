@@ -13,12 +13,23 @@ export default function ChartSettingsDialog({ allSensors, selectedSensors, setSe
     }
   }, [dialogOpen, days, selectedSensors]);
 
-  const toggleSensor = id => {
+const toggleSensor = id => {
+    const clickedSensor = allSensors.find(s => s.sensor_id === id);
+    const selectedSensorsDetails = tempSelected.map(sid => allSensors.find(s => s.sensor_id === sid));
+
+    if (selectedSensorsDetails.length > 0) {
+      const existingType = selectedSensorsDetails[0].name;
+      if (clickedSensor.name !== existingType && !tempSelected.includes(id)) {
+        alert(`Sensors must be of the same type. Current type: "${existingType}", selected: "${clickedSensor.name}"`);
+        return;
+      }
+    }
+
     setTempSelected(prev =>
       prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
     );
   };
-
+  
   const applySettings = () => {
     setSelectedSensors(tempSelected);
     setDays(tempDays);
@@ -30,14 +41,12 @@ export default function ChartSettingsDialog({ allSensors, selectedSensors, setSe
     <div className="border-bottom d-flex justify-content-between align-items-center mb-3" >
       <h3 >Sensor data overview</h3>
       <div style={{ marginLeft: "100px", marginBottom: "8px", gap: "8px", display: "flex" }}>
-      <button className="btn-open" onClick={() => setDialogOpen(true)}>
-        Settings
-      </button>
-       <button
-              className="btn-open"
-              onClick={resetChart}>
+       <button className="btn-open" onClick={resetChart}>
         Reset
         </button>
+          <button className="btn-open" onClick={() => setDialogOpen(true)}>
+        Settings
+      </button>
         </div>
       </div>
       {dialogOpen && (

@@ -6,17 +6,17 @@ export default function SensorChart({ measurements }) {
   const series = useMemo(() => {
     const sensors = {};
     measurements.forEach(m => {
-      const sensor_id = m.sensor_id;
-      if (!sensors[sensor_id]) sensors[sensor_id] = [];
-      sensors[sensor_id].push([new Date(m.timestamp_utc), m.value]);
+      const sensor_label = m.sensor_label;
+      if (!sensors[sensor_label]) sensors[sensor_label] = [];
+      sensors[sensor_label].push([new Date(m.timestamp_utc), m.value]);
     });
 
-    return Object.keys(sensors).map(sensor_id => ({
-      name: sensor_id,
+    return Object.keys(sensors).map(sensor_label => ({
+      name: sensor_label,
       type: "line",
       showSymbol: false,
       areaStyle: {opacity: 0.1},
-      data: sensors[sensor_id].sort((a, b) => a[0] - b[0])
+      data: sensors[sensor_label].sort((a, b) => a[0] - b[0])
     }));
   }, [measurements]);
 
