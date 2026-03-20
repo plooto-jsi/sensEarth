@@ -12,16 +12,16 @@ from fetcher import Fetcher
 from mapper import Mapper
 from utils import retry_request, safe_emit, normalize_altitude
 from extractors.xml_extractor import XMLExtractor
-# from extractors.json_extractor import JSONExtractor
-# from extractors.csv_extractor import CSVExtractor
+from extractors.json_extractor import JSONExtractor
+from extractors.csv_extractor import CSVExtractor
 # from extractors.html_extractor import HTMLExtractor
 
 from monitoring.client import emit_component_registration, emit_event, emit_metric, emit_heartbeat
 
 EXTRACTOR_MAP = {
     "xml": XMLExtractor,
-    # "json": JSONExtractor,
-    # "csv": CSVExtractor,
+    "json": JSONExtractor,
+    "csv": CSVExtractor,
     # "html": HTMLExtractor
 }
 
@@ -234,6 +234,29 @@ class Scraper:
                 break
             await asyncio.sleep(self.fetch_interval)
         safe_emit(emit_heartbeat, name="scraper", instance_id=self.name, status="FAIL")
+
+class HistoricScraper(Scraper):
+    async def run_historic(self, file_path: str):
+        """Processes a local file once and exits."""
+        logger.info(f"Starting historic import for {file_path}")
+        
+        with open(file_path, "rb") as f:
+            raw_data = f.read()
+            
+        extracted = self.extractor.extract(raw_data, self.scraper_config.get("delimiter", ";"))
+        mapped = self.mapper.map_records(extracted)
+        
+        records = self.hash_records(mapped)
+        unregistered = self.unregistered_records(records)
+        self.register(unregistered)
+        
+        chunk_size = 500
+        for i in range(0, len(records), chunk_size):
+            chunk = records[i : i + chunk_size]
+            self.send_measurements(chunk)
+            logger.info(f"Progress: {i + len(chunk)}/{len(records)}")
+        
+        logger.info("Historic import completed.")
 
 def load_configs(folder="configs", selected=None):
     """

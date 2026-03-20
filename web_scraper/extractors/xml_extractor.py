@@ -2,7 +2,11 @@ from lxml import etree
 from .base import Extractor
 
 class XMLExtractor(Extractor):
-    def extract(self, data: bytes, root_tag: str = "postaja") -> list[dict]:
+    def extract(self, data: bytes, root_tag: str = None) -> list[dict]:
+        """
+        data: The raw bytes from the fetcher
+        root_tag: The key in the JSON object where the list of records is located.
+        """
         result = []
         try:
             root = etree.fromstring(data)

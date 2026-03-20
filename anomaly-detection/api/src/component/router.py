@@ -42,7 +42,6 @@ def register(payload: RegisterPayload, db: Session = Depends(get_db)) -> Dict[st
     }
     """
     
-
     if not payload:
         logger.warning("Empty payload received in register endpoint")
         raise HTTPException(status_code=400, detail="Empty payload")

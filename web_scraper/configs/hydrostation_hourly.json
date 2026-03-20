@@ -54,6 +54,24 @@
           "value_min": 0,
           "value_max": 100
         }
+      },
+      {
+        "sensor_label": "ime_kratko",
+        "sensor_name": "ARSO Water Flow Sensor",
+        "longitude": "wgs84_dolzina",
+        "latitude": "wgs84_sirina",
+        "altitude": "kota_0",
+        "sensor_description": "Water flow sensor data from ARSO",
+        "measurements": [
+          {"value": "pretok", "timestamp_utc": "datum"}
+        ],
+        "sensor_type": {
+          "name": "water_flow",
+          "phenomenon": "Water Flow",
+          "unit": "m^3/s",
+          "value_min": 0,
+          "value_max": 100
+        }
       }
     ]
 }

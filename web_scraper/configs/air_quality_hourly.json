@@ -1,0 +1,150 @@
+{
+  "scraper_config": {
+    "name": "ARSO_AirQuality_Scraper",
+    "description": "Scraper for hourly air quality data from ARSO stations",
+    "target_url": "https://www.arso.gov.si/xml/zrak/ones_zrak_urni_podatki_zadnji.xml",
+    "fetch_interval": 3600,
+    "selector": "None",
+    "format": "xml",
+    "root_tag": "postaja"
+  },
+
+  "mapping_config": {
+    "node": {
+      "node_label": "ARSO_AirQuality_Station",
+      "node_serial": "sifra",
+      "longitude": "wgs84_dolzina",
+      "latitude": "wgs84_sirina",
+      "altitude": "nadm_visina"
+    },
+
+    "sensors": [
+      {
+        "sensor_label": "merilno_mesto",
+        "sensor_name": "Carbon Monoxide Sensor",
+        "longitude": "wgs84_dolzina",
+        "latitude": "wgs84_sirina",
+        "altitude": "nadm_visina",
+        "sensor_description": "Hourly CO concentration measured by ARSO",
+        "measurements": [
+          {"value": "co", "timestamp_utc": "datum_od"}
+        ],
+        "sensor_type": {
+          "name": "CO",
+          "phenomenon": "CO",
+          "unit": "mg/m³",
+          "value_min": 0,
+          "value_max": 50
+        }
+      },
+      {
+        "sensor_label": "merilno_mesto",
+        "sensor_name": "Ozone Sensor",
+        "longitude": "wgs84_dolzina",
+        "latitude": "wgs84_sirina",
+        "altitude": "nadm_visina",
+        "sensor_description": "Hourly O3 concentration measured by ARSO",
+        "measurements": [
+          {"value": "o3", "timestamp_utc": "datum_od"}
+        ],
+        "sensor_type": {
+          "name": "O3",
+          "phenomenon": "O3",
+          "unit": "µg/m³",
+          "value_min": 0,
+          "value_max": 300
+        }
+      },
+      {
+        "sensor_label": "merilno_mesto",
+        "sensor_name": "Nitrogen Dioxide Sensor",
+        "longitude": "wgs84_dolzina",
+        "latitude": "wgs84_sirina",
+        "altitude": "nadm_visina",
+        "sensor_description": "Hourly NO2 concentration measured by ARSO",
+        "measurements": [
+          {"value": "no2", "timestamp_utc": "datum_od"}
+        ],
+        "sensor_type": {
+          "name": "NO2",
+          "phenomenon": "NO2",
+          "unit": "µg/m³",
+          "value_min": 0,
+          "value_max": 300
+        }
+      },
+      {
+        "sensor_label": "merilno_mesto",
+        "sensor_name": "PM10 Sensor",
+        "longitude": "wgs84_dolzina",
+        "latitude": "wgs84_sirina",
+        "altitude": "nadm_visina",
+        "sensor_description": "Hourly PM10 concentration measured by ARSO",
+        "measurements": [
+          {"value": "pm10", "timestamp_utc": "datum_od"}
+        ],
+        "sensor_type": {
+          "name": "PM10",
+          "phenomenon": "PM10",
+          "unit": "µg/m³",
+          "value_min": 0,
+          "value_max": 500
+        }
+      },
+      {
+        "sensor_label": "merilno_mesto",
+        "sensor_name": "PM2.5 Sensor",
+        "longitude": "wgs84_dolzina",
+        "latitude": "wgs84_sirina",
+        "altitude": "nadm_visina",
+        "sensor_description": "Hourly PM2.5 concentration measured by ARSO",
+        "measurements": [
+          {"value": "pm2.5", "timestamp_utc": "datum_od"}
+        ],
+        "sensor_type": {
+          "name": "PM2.5",
+          "phenomenon": "PM2.5",
+          "unit": "µg/m³",
+          "value_min": 0,
+          "value_max": 500
+        }
+      },
+      {
+        "sensor_label": "merilno_mesto",
+        "sensor_name": "Benzene Sensor",
+        "longitude": "wgs84_dolzina",
+        "latitude": "wgs84_sirina",
+        "altitude": "nadm_visina",
+        "sensor_description": "Hourly Benzene concentration measured by ARSO",
+        "measurements": [
+          {"value": "benzen", "timestamp_utc": "datum_od"}
+        ],
+        "sensor_type": {
+          "name": "Benzene",
+          "phenomenon": "Benzene",
+          "unit": "µg/m³",
+          "value_min": 0,
+          "value_max": 50
+        }
+      },
+      {
+        "sensor_label": "merilno_mesto",
+        "sensor_name": "Nitrogen Oxides (NOx) Sensor",
+        "longitude": "wgs84_dolzina",
+        "latitude": "wgs84_sirina",
+        "altitude": "nadm_visina",
+        "sensor_description": "Hourly NOx (NO + NO2) concentration measured by ARSO",
+        "measurements": [
+          {"value": "nox", "timestamp_utc": "datum_od"}
+        ],
+        "sensor_type": {
+          "name": "NOx",
+          "phenomenon": "NOx",
+          "unit": "µg/m³",
+          "value_min": 0,
+          "value_max": 500
+        }
+      }
+    ]
+  }
+}
