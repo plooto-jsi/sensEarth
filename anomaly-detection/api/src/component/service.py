@@ -206,8 +206,7 @@ def register_entities(payload: RegisterPayload, db: Session) -> Dict[str, Dict[s
 
     db.commit()
     return {"nodes": node_map, "sensors": sensor_map}
-
-
+        
 def ingest_measurements(payload: dataIngestPayload, db: Session) -> Dict[str, Any]:
     """
     Ingests measurement data for sensors. Each entry in the payload must include 'sensor_hash', 'timestamp_utc', and 'value'.

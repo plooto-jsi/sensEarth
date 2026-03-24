@@ -73,7 +73,7 @@ CREATE TABLE IF NOT EXISTS sensor_measurement (
 SELECT create_hypertable(
     'sensor_measurement',
     'timestamp_utc',
-    chunk_time_interval => INTERVAL '1 day'
+    chunk_time_interval => INTERVAL '7 day' --- Added later, previously set to 1 ady
 );
 
 -- ===============================

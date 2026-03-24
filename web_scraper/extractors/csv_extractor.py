@@ -13,7 +13,7 @@ class CSVExtractor(Extractor):
             content = data.decode("utf-8")
             f = io.StringIO(content)
             
-            reader = csv.DictReader(f, delimiter=root_tag)
+            reader = csv.DictReader(f, delimiter=";")
             
             for row in reader:
                 clean_row = {k.strip(): v.strip() for k, v in row.items() if k is not None}

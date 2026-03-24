@@ -1,0 +1,86 @@
+{
+  "scraper_config" :{
+    "name": "ARSO_HydroStation_Historic",
+    "description": "Historic data for water level data from ARSO Mura 1060",
+    "target_url": "https://vode.arso.gov.si/hidarhiv/pov_arhiv_tab.php?p_vodotok=Mura&p_postaja=1060",
+    "fetch_interval": 3600,
+    "selector": "None",
+    "format": "csv",
+    "root_tag": ";"
+  },
+
+  "mapping_config": {
+  "node": {
+    "node_label": "ARSO_Hydro_Station",
+    "node_serial": "1060",
+    "longitude": 15.9953,
+    "latitude": 46.68124,
+    "altitude": 202.35
+  },
+  "sensors": [
+    {
+      "sensor_label": "Mura - Gor. Radgona I",
+      "sensor_name": "ARSO Water Level Sensor",
+      "longitude": 15.9953,
+      "latitude": 46.68124,
+      "altitude": 202.35,
+      "sensor_description": "Water level sensor data from ARSO",
+      "sensor_type": {
+        "name": "water_level",
+        "phenomenon": "Water Level",
+        "unit": "m",
+        "value_min": 0,
+        "value_max": 1000
+      },
+      "measurements": [
+        {
+          "timestamp_utc": "Datum",
+          "value": "vodostaj (cm)"
+        }
+      ]
+    },
+    {
+      "sensor_label": "Mura - Gor. Radgona I",
+      "sensor_name": "ARSO Water Temperature Sensor",
+      "longitude": 15.9953,
+      "latitude": 46.68124,
+      "altitude": 202.35,
+      "sensor_description": "Water temperature sensor data from ARSO",
+      "sensor_type": {
+        "name": "water_temperature",
+        "phenomenon": "Water Temperature",
+        "unit": "°C",
+        "value_min": 0,
+        "value_max": 100
+      },
+      "measurements": [
+        {
+          "timestamp_utc": "Datum",
+          "value": "temp. vode (°C)"
+        }
+      ]
+    },
+    {
+      "sensor_label": "Mura - Gor. Radgona I",
+      "sensor_name": "ARSO Water Flow Sensor",
+      "longitude": 15.9953,
+      "latitude": 46.68124,
+      "altitude": 202.35,
+      "sensor_description": "Water flow sensor data from ARSO",
+      "sensor_type": {
+        "name": "water_flow",
+        "phenomenon": "Water Flow",
+        "unit": "m^3/s",
+        "value_min": 0,
+        "value_max": 100
+      },
+      "measurements": [
+        {
+          "timestamp_utc": "Datum",
+          "value": "pretok (m3/s)"
+        }
+      ]
+    }
+  ]
+}
+}

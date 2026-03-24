@@ -10,7 +10,7 @@ import time
 from logger import logger
 from fetcher import Fetcher
 from mapper import Mapper
-from utils import retry_request, safe_emit, normalize_altitude
+from utils import *
 from extractors.xml_extractor import XMLExtractor
 from extractors.json_extractor import JSONExtractor
 from extractors.csv_extractor import CSVExtractor
@@ -44,11 +44,11 @@ class Scraper:
         self.fetcher = Fetcher()
         self.mapper = Mapper(mapping_config)
 
-        fmt = scraper_config.get("format")
-        if fmt not in EXTRACTOR_MAP:
-            raise ValueError(f"Unsupported format: {fmt}")
+        self.format = scraper_config.get("format")
+        if self.format not in EXTRACTOR_MAP:
+            raise ValueError(f"Unsupported format: {self.format}")
         else:
-            self.extractor = EXTRACTOR_MAP[fmt]()
+            self.extractor = EXTRACTOR_MAP[self.format]()
 
         self.fetch_interval = scraper_config.get("fetch_interval", 0)
         self.name = scraper_config.get("name", "Unnamed Scraper")
@@ -65,6 +65,10 @@ class Scraper:
             json.dump(self.state, f, indent=2)
 
     def load_state(self):
+        """
+        Loads file state. It is located in docker container.
+        Contains pairs of "nodes": { node_hash : node_id}, "sensors": { sensor_hash : sensor_id}}
+        """
         try:
             if os.path.exists(self.state_file):
                 with open(self.state_file, "r", encoding="utf-8") as f:
@@ -77,12 +81,13 @@ class Scraper:
     def register(self, payload: Dict) -> Dict:
         """
         Registers nodes and sensors from the payload using the /register endpoint.
+        Returns pairs of "nodes": { node_hash : node_id}, "sensors": { sensor_hash : sensor_id}}
         """
-        safe_emit(emit_heartbeat, name="scraper", instance_id=self.name, status="OK")
         # Get payload infor and find kota_0 in altitude"
         normalize_altitude(payload)
                 
         if not payload.get("nodes") and not payload.get("sensors"):
+            logger.info(f"Nothing to register")
             return {}  # Nothing to register
         try:
             response = retry_request(
@@ -99,27 +104,40 @@ class Scraper:
             self.save_state()
 
             safe_emit(emit_event, name="scraper",instance_id=self.name,event_type="registration_success",severity="INFO",message=f"Registered {len(data.get('nodes', {}))} nodes and {len(data.get('sensors', {}))} sensors")
-
             return data
         except Exception as e:
             logger.error(f"Error during registration: {e}")
-            safe_emit(emit_event, name="scraper",instance_id=self.name,event_type="registration_failure",severity="ERROR",message=f"Registration failed: {e}")
+            safe_emit(emit_event, name="scraper",instance_id=self.name,event_type="registration_failure",severity="ERROR",message=f"Registration failed | nodes={len(payload.get('nodes', []))} sensors={len(payload.get('sensors', []))} | error={e}")
             return {}
 
     def send_measurements(self, payload: List[Dict]):
-        safe_emit(emit_heartbeat, name="scraper", instance_id=self.name, status="OK")
+        """
+        Sends measurements to the API.
+        Expects payload with sensors and their measurements.
+        Skips unknown sensors and invalid timestamps, normalizes timestamps,
+        and sends valid data to the `/dataIngest` endpoint.
+        Emits metrics for sent and skipped measurements and logs success/failure.
+        """
         measurements = []
+        skipped = 0 # track skipped sensors
         for entry in payload:
             for sensor in entry.get("sensors", []):
                 sensor_hash = sensor["sensor_hash"]
                 sensor_id = self.state["sensors"].get(sensor_hash)
                 if not sensor_id:
+                    skipped += 1
                     logger.warning(f"Skipping unknown sensor {sensor_hash}")
                     continue
                 for m in sensor.get("measurements", []):
+                    try:
+                        ts = m["timestamp_utc"]
+                        normalized_ts = normalize_timestamp(ts)
+                    except ValueError:
+                        logger.warning(f"Skipping invalid timestamp: {ts}")
+                        continue
                     measurements.append({
                         "sensor_hash": sensor_hash,
-                        "timestamp_utc": m["timestamp_utc"],
+                        "timestamp_utc": normalized_ts,
                         "value": m["value"]
                     })
 
@@ -133,10 +151,12 @@ class Scraper:
                     url=f"{API_URL}/dataIngest",
                     json=measurements
                 )
-                return response.json()
 
                 safe_emit(emit_event, name="scraper",instance_id=self.name,event_type="data_ingest_success",severity="INFO",message=f"Sent measurements successfully")
                 safe_emit(emit_metric, name="scraper", instance_id=self.name, metric_name="measurements_sent", value=len(measurements))
+                safe_emit(emit_metric, name="scraper", instance_id=self.name, metric_name="measurements_skipped", value=skipped)
+
+                return response.json()
             except Exception as e:  
                 logger.error(f"Error sending measurements: {e}")
                 safe_emit(emit_event, name="scraper",instance_id=self.name,event_type="data_ingest_failure",severity="ERROR",message=f"Failed to send measurements: {e}")
@@ -236,32 +256,41 @@ class Scraper:
         safe_emit(emit_heartbeat, name="scraper", instance_id=self.name, status="FAIL")
 
 class HistoricScraper(Scraper):
-    async def run_historic(self, file_path: str):
+    async def run_historic(self, file_path: str = "ingest/data.csv"):
         """Processes a local file once and exits."""
+
+        if self.format.lower() != 'csv': 
+            return
+
         logger.info(f"Starting historic import for {file_path}")
-        
+
         with open(file_path, "rb") as f:
             raw_data = f.read()
-            
-        extracted = self.extractor.extract(raw_data, self.scraper_config.get("delimiter", ";"))
+
+        # No fetcher, here.File input only.
+        delimiter = self.scraper_config.get("root_tag", ";") 
+        extracted = self.extractor.extract(raw_data, delimiter)
         mapped = self.mapper.map_records(extracted)
         
         records = self.hash_records(mapped)
         unregistered = self.unregistered_records(records)
-        self.register(unregistered)
         
+        self.register(unregistered)
+
+        inserted = []
         chunk_size = 500
         for i in range(0, len(records), chunk_size):
             chunk = records[i : i + chunk_size]
-            self.send_measurements(chunk)
+            inserted.append(self.send_measurements(chunk))
             logger.info(f"Progress: {i + len(chunk)}/{len(records)}")
         
-        logger.info("Historic import completed.")
+        logger.info(f"Historic import completed. {inserted}")
 
 def load_configs(folder="configs", selected=None):
     """
     Loads every .json config pair from specified folder.
     """
+    
     configs = []
     folder_path = os.path.join(os.path.dirname(__file__), folder)
     for file in os.listdir(folder_path):
@@ -277,12 +306,23 @@ def load_configs(folder="configs", selected=None):
  
 async def main():
     parser = argparse.ArgumentParser(description="Anomaly Detector CLI")
+
     parser.add_argument("--config", nargs="*", help="Specify which config(s) to use (none = all)")
+    parser.add_argument("--historic", action="store_true", help="Run historic import")
+
     args = parser.parse_args()
     configs = load_configs(selected=args.config)
 
+    # tasks = []
+    # for scraper_conf, mapping_conf in configs:
+    #     scraper = HistoricScraper(scraper_conf, mapping_conf)
+    #     tasks.append(scraper.run_historic())
+
+    # await asyncio.gather(*tasks)
+
     scrapers = [Scraper(scraper_conf, mapping_conf) for scraper_conf, mapping_conf in configs]
     await asyncio.gather(*(s.run() for s in scrapers))
+
 
 
 if __name__ == "__main__":
