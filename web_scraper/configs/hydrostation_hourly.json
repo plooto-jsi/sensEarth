@@ -4,7 +4,6 @@
     "description": "Scraper for water level data from ARSO",
     "target_url": "https://www.arso.gov.si/xml/vode/hidro_podatki_zadnji.xml",
     "fetch_interval": 3600,
-    "selector": "None",
     "format": "xml",
     "root_tag": "postaja"
   },

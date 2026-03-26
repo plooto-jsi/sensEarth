@@ -1,10 +1,10 @@
 {
   "scraper_config": {
-    "name": "ARSO_MeteoSI_Observation_Scraper",
-    "description": "Scraper for meteorological observation data from ARSO MeteoSI XML service",
-    "target_url": "https://meteo.arso.gov.si/uploads/probase/www/observ/surface/text/sl/observation_si_latest.xml",
+    "name": "ARSO_MeteoSI_Observation_Scraper_HTML",
+    "description": "Scraper for meteorological observation data from ARSO MeteoSI HTML service",
+    "target_url": "https://meteo.arso.gov.si/uploads/probase/www/observ/surface/text/sl/observation_si_latest.html",
     "fetch_interval": 3600,
-    "format": "xml",
+    "format": "html",
     "root_tag": "metData"
   },
   "mapping_config": {

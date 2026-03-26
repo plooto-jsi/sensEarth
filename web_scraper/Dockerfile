@@ -8,4 +8,4 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 RUN mkdir -p /app/state
 
-CMD ["python", "scraper.py" , "--config"]
+CMD ["python", "scraper.py" , "--config", "arso_meteo_html.json"]

@@ -1,6 +1,36 @@
 import time
 from requests.exceptions import RequestException
 from datetime import datetime
+import os
+import json
+
+
+def load_configs(folder="configs", selected=None):
+    """
+    Loads every .json config pair from specified folder.
+    Files that contain csv in name are excluded.
+    Should be only run by --historic
+    """
+    
+    configs = []
+    folder_path = os.path.join(os.path.dirname(__file__), folder)
+    for file in os.listdir(folder_path):
+        if not file.endswith(".json"):
+            continue
+        name = os.path.splitext(file)[0]
+
+        if selected and name not in selected:
+            continue
+        with open(os.path.join(folder_path, file), "r") as f:
+            data = json.load(f)
+            
+            format_type = data.get("scraper_config", {}).get("format", "").lower()
+            # exclude CSV
+            if format_type != "csv": 
+                configs.append((data["scraper_config"], data["mapping_config"]))
+
+    return configs
+ 
 
 def retry_request(func, retries=5, delay=5, backoff=2, *args, **kwargs):
     """

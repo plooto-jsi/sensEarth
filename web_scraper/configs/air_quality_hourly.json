@@ -4,7 +4,6 @@
     "description": "Scraper for hourly air quality data from ARSO stations",
     "target_url": "https://www.arso.gov.si/xml/zrak/ones_zrak_urni_podatki_zadnji.xml",
     "fetch_interval": 3600,
-    "selector": "None",
     "format": "xml",
     "root_tag": "postaja"
   },
