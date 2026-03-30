@@ -1,6 +1,11 @@
 from lxml import html
 from .base import Extractor
 
+        
+def _local_name(tag: str) -> str:
+    if isinstance(tag, str) and "}" in tag:
+        return tag.split("}", 1)[1]
+    return tag
 
 class HTMLExtractor(Extractor):
     def extract(self, data: bytes, root_tag: str = None) -> list[dict]:
@@ -17,6 +22,7 @@ class HTMLExtractor(Extractor):
                 raise ValueError("root_tag must be provided for HTML extraction")
 
             elements = tree.xpath(root_tag)
+            print(f"[HTMLExtractor] Found {len(elements)} elements")
 
             for el in elements:
                 rec: dict = {}
@@ -41,11 +47,6 @@ class HTMLExtractor(Extractor):
         except Exception as e:
             print(f"[HTMLExtractor] Error parsing HTML: {e}")
 
-        print(result)
+        print("[HTMLExtractor] Result: ", result)
 
         return result
-        
-    def _local_name(tag: str) -> str:
-        if isinstance(tag, str) and "}" in tag:
-            return tag.split("}", 1)[1]
-        return tag

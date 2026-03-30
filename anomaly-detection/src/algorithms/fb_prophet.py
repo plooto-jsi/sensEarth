@@ -3,7 +3,7 @@ import sys
 from pandas._libs.tslibs.timestamps import Timestamp
 from pandas.core.frame import DataFrame
 import pandas as pd
-from algorithms.prophet import Prophet
+from prophet import Prophet
 import numpy as np
 
 from algorithms.anomaly_detection import AnomalyDetectionAbstract
@@ -58,11 +58,22 @@ class fb_Prophet(AnomalyDetectionAbstract):
         if("history_file" in conf):
             self.history_file = conf['history_file']
             self.memory_dataframe = pd.read_csv(conf["history_file"])
+            # Ensure the dataframe has the required columns for Prophet
+            if "ds" not in self.memory_dataframe.columns or "y" not in self.memory_dataframe.columns:
+                raise ValueError(f"History file must contain 'ds' and 'y' columns. Found columns: {self.memory_dataframe.columns.tolist()}")
+            # Keep only ds and y columns
+            self.memory_dataframe = self.memory_dataframe[["ds", "y"]]
+            # Convert ds to datetime if it's numeric
+            if pd.api.types.is_numeric_dtype(self.memory_dataframe["ds"]):
+                self.memory_dataframe["ds"] = pd.to_datetime(self.memory_dataframe["ds"], unit="s")
+            else:
+                self.memory_dataframe["ds"] = pd.to_datetime(self.memory_dataframe["ds"])
             self.memory_dataframe = self.memory_dataframe.iloc[-self.max_samples:]
         else:
+            self.history_file = "memory_history.csv"
             self.memory_dataframe = pd.DataFrame({
-                "ds": [],
-                "y": []}
+                "ds": pd.Series([], dtype="datetime64[ns]"),
+                "y": pd.Series([], dtype="float64")}
             )
 
         self.memory_dataframe.to_csv(self.history_file, index=False)
@@ -107,8 +118,10 @@ class fb_Prophet(AnomalyDetectionAbstract):
             if(self.memory_dataframe.shape[0] < self.min_samples):
 
                 # Add sample to dataframe for retrain
-                self.memory_dataframe = self.memory_dataframe.append({"ds": string_timestamp, "y": value},
-                                            ignore_index=True)
+                self.memory_dataframe = pd.concat([
+                    self.memory_dataframe,
+                    pd.DataFrame([{"ds": string_timestamp, "y": value}])
+                ], ignore_index=True)
 
                 #print(f'Memory dataframe now has {self.memory_dataframe.shape[0]} samples')
 
@@ -145,8 +158,10 @@ class fb_Prophet(AnomalyDetectionAbstract):
                 status_code = self.OK_CODE
 
             # Add sample to dataframe for retrain
-            self.memory_dataframe = self.memory_dataframe.append({"ds": string_timestamp, "y": value},
-                                        ignore_index=True)
+            self.memory_dataframe = pd.concat([
+                self.memory_dataframe,
+                pd.DataFrame([{"ds": string_timestamp, "y": value}])
+            ], ignore_index=True)
             self.memory_dataframe = self.memory_dataframe.iloc[-self.max_samples:]
             self.memory_dataframe = self.memory_dataframe.reset_index(drop = True)
 
@@ -170,14 +185,18 @@ class fb_Prophet(AnomalyDetectionAbstract):
 
     def train_model(self):
         # Check if enough samples in memory
-        self.memory_dataframe = self.memory_dataframe[-self.max_samples:]
+        self.memory_dataframe = self.memory_dataframe.iloc[-self.max_samples:]
         print(f'{len(self.memory_dataframe)}')
         if(self.memory_dataframe.shape[0] < self.min_samples):
             print(f'Not enough samples({self.memory_dataframe.shape[0]}) - exiting training', flush = True)
             return
 
+        # Ensure ds column is datetime
+        if not pd.api.types.is_datetime64_any_dtype(self.memory_dataframe["ds"]):
+            self.memory_dataframe["ds"] = pd.to_datetime(self.memory_dataframe["ds"])
+
         # Initialize new model
-        self.model = Prophet(interval_width=self.uncertainty_interval)
+        self.model = Prophet()
 
         # Fit the model
         self.model.fit(self.memory_dataframe)

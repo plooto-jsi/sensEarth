@@ -3,7 +3,7 @@ import sys
 from pandas._libs.tslibs.timestamps import Timestamp
 from pandas.core.frame import DataFrame
 import pandas as pd
-import fbprophet as Prophet
+from prophet import Prophet
 
 from algorithms.anomaly_detection import AnomalyDetectionAbstract
 from output import OutputAbstract, TerminalOutput, FileOutput, KafkaOutput
@@ -17,7 +17,7 @@ class Prophet(AnomalyDetectionAbstract):
 
     uncertainty_interval: float
 
-    memory_dataframe: Dataframe
+    memory_dataframe: DataFrame
     memory_location: str
     history_file: str
     samples_in_store: int
@@ -42,7 +42,7 @@ class Prophet(AnomalyDetectionAbstract):
         self.uncertainty_interval = conf["uncertainty_interval"]
 
         # Saved data information
-        if("restrain_interval"in conf):
+        if("retrain_interval"in conf):
             self.retrain_interval = conf["retrain_interval"]
         else:
             self.retrain_interval = 1
@@ -54,7 +54,7 @@ class Prophet(AnomalyDetectionAbstract):
         # save to memory location)
         self.memory_dataframe = pd.read_csv(conf["history_file"])
         self.memory_dataframe = self.memory_dataframe.iloc[-self.samples_in_store:]
-        self.memory_dataframe.to_csv(self.memory_location, Index=False)
+        self.memory_dataframe.to_csv(self.memory_location, index=False)
 
         # First train
         self.train_model()
@@ -74,7 +74,7 @@ class Prophet(AnomalyDetectionAbstract):
             return status, status_code
 
         # Extract the monitored value
-        timestamp = message_value["tiemstamp"]
+        timestamp = message_value["timestamp"]
         string_timestamp = pd.to_datetime(timestamp, unit="s")
         value = message_value["ftr_vector"]
         value = value[0]
@@ -145,7 +145,7 @@ class Prophet(AnomalyDetectionAbstract):
         interval_width = 0.9
 
         # Initialize new model
-        self.model = Prophet.Prophet(seasonality_mode='multiplicative',
+        self.model = Prophet(seasonality_mode='multiplicative',
                                      interval_width=interval_width,
                                      changepoint_range = self.changepoint_range)
 
@@ -159,3 +159,4 @@ class Prophet(AnomalyDetectionAbstract):
         self.intervals = []
         for i, row in forecast.iterrows():
             self.intervals.append([row.loc["yhat_lower"], row.loc["yhat_upper"]])
+    

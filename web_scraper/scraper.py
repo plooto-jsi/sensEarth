@@ -218,8 +218,8 @@ class Scraper:
                 )
 
                 safe_emit(emit_event, name="scraper",instance_id=self.name,event_type="data_ingest_success",severity="INFO",message=f"Sent measurements successfully")
-                safe_emit(emit_metric, name="scraper", instance_id=self.name, metric_name="measurements_sent", value=len(measurements))
-                safe_emit(emit_metric, name="scraper", instance_id=self.name, metric_name="measurements_skipped", value=skipped)
+                safe_emit(emit_metric, name="scraper", instance_id=self.name, metric_name="measurements_sent_rate", value=(len(measurements) / (len(measurements) + skipped)))
+                safe_emit(emit_metric, name="scraper", instance_id=self.name, metric_name="measurements_skipped_rate", value=(skipped / len(measurements) * 100))
 
                 return response.json()
             except Exception as e:  

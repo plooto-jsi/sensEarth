@@ -7,6 +7,8 @@ import EventsDashboard from './events';
 import SensorChart from "./chart/SensorChart";
 import ChartSettingsModal from "./chart/ChartSettingsModal";
 import LatestMeasurementsDashboard from './latest_measurements';
+import IngestionStatus from './ingestion_status';
+import DataOverview from './data_overiew';
 //-----------------------|| DASHBOARD SENSEARTH ||-----------------------//
 
 async function fetchMeasurements(sensorIDs = [], days = 0) {
@@ -96,7 +98,12 @@ return (
       <p>A digital twin of sensor data sources</p>
     </div>
   </div>
+  <div className="system-overview">
+      <IngestionStatus modelsUpdated={modelsUpdated} />
+      <DataOverview refreshKey={modelsUpdated} />
+    </div>
   <div className="dashboard-grid">
+    
     <LatestMeasurementsDashboard sensors={sensors} loading={loading} />
     <Card className="flat-card" style={{ gridColumn: "span 1" }}>
       <Card.Body>

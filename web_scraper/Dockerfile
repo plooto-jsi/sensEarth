@@ -2,10 +2,12 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-COPY . .
+COPY requirements.txt .
 
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install -r requirements.txt
+
+COPY . .
 
 RUN mkdir -p /app/state
 
-CMD ["python", "scraper.py" , "--config", "arso_meteo_html.json"]
+CMD ["python", "scraper.py" , "--config"]

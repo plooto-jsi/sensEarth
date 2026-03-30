@@ -7,12 +7,13 @@ pandas==1.2.3
 scipy==1.6.1
 scikit_learn==1.0.1
 matplotlib==3.3.4
-influxdb_client==1.20.0 
-tensorflow==2.4.0
+influxdb_client==1.20.0
+rrcf==0.3.0
+pystan==2.19.1.1
+convertdate
+fbprophet==0.7.1
 fastapi==0.70.0
 uvicorn==0.15.0
 sqlalchemy==1.4.22
 minio>=7.1.0
 psycopg2-binary
-rrcf==0.3.0
-
