@@ -72,13 +72,9 @@ export default function NavLeft() {
       <Link to="/dashboard/sales" className="text-decoration-none nav-item-link">
         Dashboard
       </Link>
-    {/* Monitoring webpage */}
-      <Link to="/dashboard/sales" className="text-decoration-none nav-item-link">
-        Monitoring
-      </Link>
     {/* Models webpage */}
-      <Link to="/dashboard/sales" className="text-decoration-none nav-item-link">
-        Models
+      <Link to="/typography" className="text-decoration-none nav-item-link">
+        Model logs
       </Link>
 
 </div>

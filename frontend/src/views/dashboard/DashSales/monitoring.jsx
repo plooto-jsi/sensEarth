@@ -32,7 +32,7 @@ export default function MonitoringDashboard( {modelsUpdated} ) {
                 <Spinner animation="border" />
               </div>
             ) : (
-              <Table className="sensor-table">
+              <Table className="dashboard-table">
                 <thead>
                   <tr>
                     <th>Name</th>

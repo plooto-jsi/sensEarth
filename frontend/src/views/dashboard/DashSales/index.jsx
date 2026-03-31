@@ -9,6 +9,8 @@ import ChartSettingsModal from "./chart/ChartSettingsModal";
 import LatestMeasurementsDashboard from './latest_measurements';
 import IngestionStatus from './ingestion_status';
 import DataOverview from './data_overiew';
+import HealthOverview from './health_overview';
+import ModelRuns from './models_overview';
 //-----------------------|| DASHBOARD SENSEARTH ||-----------------------//
 
 async function fetchMeasurements(sensorIDs = [], days = 0) {
@@ -36,7 +38,7 @@ export default function DashboardSales() {
   const [loading, setLoading] = useState(true);
    const [allSensors, setAllSensors] = useState([]); // [{id, label}]
   const [selectedSensors, setSelectedSensors] = useState([]);
-  const [days, setDays] = useState(7);
+  const [days, setDays] = useState(30);
   const [measurements, setMeasurements] = useState([]);
   const [chartReset, setChartReset] = useState(0);
 
@@ -58,7 +60,7 @@ export default function DashboardSales() {
 
 const resetChart = () => {
   setSelectedSensors([]);
-  setDays(7);
+  setDays(30);
   setMeasurements([]);
   setChartReset(v => v + 1);
 };
@@ -101,6 +103,8 @@ return (
   <div className="system-overview">
       <IngestionStatus modelsUpdated={modelsUpdated} />
       <DataOverview refreshKey={modelsUpdated} />
+      <HealthOverview refreshKey={modelsUpdated}/>
+      <ModelRuns refreshKey={modelsUpdated}/>
     </div>
   <div className="dashboard-grid">
     

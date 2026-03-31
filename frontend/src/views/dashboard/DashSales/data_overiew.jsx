@@ -1,6 +1,6 @@
-import React, { useEffect, useMemo, useState } from "react";
-import { Card, Spinner } from "react-bootstrap";
-import monitoring_api from "../../../monitoring_api"; 
+import React, { useEffect, useState } from "react";
+import { Card, Spinner, Row, Col } from "react-bootstrap";
+import monitoring_api from "../../../monitoring_api";
 
 function formatBytes(bytes) {
   if (bytes == null || Number.isNaN(bytes)) return "—";
@@ -17,162 +17,170 @@ function formatBytes(bytes) {
   return `${sign}${v.toFixed(v >= 10 ? 1 : 2)} ${units[u]}`;
 }
 
-function parsePromMetricsValueLines(text, metricName) {
-  // Prometheus exposition format: metric_name{labels} 123.45
-  // Sum all samples for the metric (handles multiple disks/nodes).
-  const re = new RegExp(
-    `^${metricName}(?:\\{[^}]*\\})?\\s+([0-9]+(?:\\.[0-9]+)?)\\s*$`,
-    "m"
+function StatCard({ label, value, subtext }) {
+  return (
+    <div
+      style={{
+        background: "#f8f9fa",
+        borderRadius: "10px",
+        padding: "12px 14px",
+        height: "100%",
+      }}
+    >
+      <div className="text-muted" style={{ fontSize: "0.8rem" }}>
+        {label}
+      </div>
+      <div className="fw-semibold" style={{ fontSize: "1.1rem" }}>
+        {value}
+      </div>
+      {subtext && (
+        <div className="text-muted" style={{ fontSize: "0.75rem" }}>
+          {subtext}
+        </div>
+      )}
+    </div>
   );
-
-  let sum = 0;
-  let found = false;
-  const lines = text.split(/\r?\n/);
-  for (const line of lines) {
-    if (line.startsWith("#")) continue;
-    const m = line.match(re);
-    if (!m) continue;
-    found = true;
-    sum += Number(m[1]);
-  }
-  return found ? sum : null;
 }
 
 export default function DataOverview({ refreshKey }) {
-  const [loadingRaw, setLoadingRaw] = useState(true);
-  const [rawFreeBytes, setRawFreeBytes] = useState(null);
-  const [rawTotalBytes, setRawTotalBytes] = useState(null);
-
-  const [loadingStructured, setLoadingStructured] = useState(true);
-  const [lastInsertCount, setLastInsertCount] = useState(null);
-  const [lastInsertTimestamp, setLastInsertTimestamp] = useState(null);
-
-  const rawUsedBytes = useMemo(() => {
-    if (rawFreeBytes == null || rawTotalBytes == null) return null;
-    return Math.max(0, rawTotalBytes - rawFreeBytes);
-  }, [rawFreeBytes, rawTotalBytes]);
-
-  const fetchRawStorage = async () => {
-    // MinIO prometheus metrics (no auth).
-    // Default URL; can be overridden via VITE_MINIO_METRICS_URL at build time.
-    const url =
-      import.meta?.env?.VITE_MINIO_METRICS_URL ||
-      "http://localhost:9000/minio/v2/metrics/cluster";
-
-    try {
-      const res = await fetch(url);
-      if (!res.ok) throw new Error(`metrics http ${res.status}`);
-      const text = await res.text();
-
-      const free = parsePromMetricsValueLines(text, "minio_disk_storage_free_bytes");
-      const total = parsePromMetricsValueLines(
-        text,
-        "minio_disk_storage_total_bytes"
-      );
-
-      setRawFreeBytes(free);
-      setRawTotalBytes(total);
-    } catch (e) {
-      console.error("Failed to fetch MinIO metrics:", e);
-      setRawFreeBytes(null);
-      setRawTotalBytes(null);
-    }
-    setLoadingRaw(false);
-  };
+  const [loading, setLoading] = useState(true);
+  const [data, setData] = useState({});
 
   const fetchStructuredStorage = async () => {
     try {
       const res = await monitoring_api.get("/events");
       const list = Array.isArray(res.data) ? res.data : [];
 
-      const latest = list
+      const filtered = list
         .filter(
           (e) =>
             e.component_name === "middleware" &&
             e.event_type === "data_ingest_completed" &&
             typeof e.message === "string"
         )
-        .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))[0];
+        .sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+
+      const latest = filtered[filtered.length - 1];
 
       if (!latest) {
-        setLastInsertCount(null);
-        setLastInsertTimestamp(null);
+        setData({});
       } else {
-        const m = latest.message.match(/Inserted\s+(\d+)\s+measurements/i);
-        setLastInsertCount(m ? Number(m[1]) : null);
-        setLastInsertTimestamp(latest.timestamp || null);
+        const counts = filtered.map((e) => {
+          const m = e.message.match(/Inserted\s+(\d+)\s+measurements/i);
+          return m ? Number(m[1]) : 0;
+        });
+
+        const total = counts.reduce((a, b) => a + b, 0);
+
+        const latestMatch = latest.message.match(/Inserted\s+(\d+)\s+measurements/i);
+        const latestCount = latestMatch ? Number(latestMatch[1]) : null;
+
+        const firstTs = filtered[0]?.timestamp
+          ? new Date(filtered[0].timestamp)
+          : null;
+        const lastTs = latest.timestamp ? new Date(latest.timestamp) : null;
+
+        let ratePerDay = null;
+        if (firstTs && lastTs && lastTs > firstTs) {
+          const spanDays =
+            (lastTs - firstTs) / (1000 * 60 * 60 * 24);
+          if (spanDays > 0) ratePerDay = total / spanDays;
+        }
+
+        const BYTES_PER_RECORD_ESTIMATE = 500;
+        const footprintBytes = total * BYTES_PER_RECORD_ESTIMATE;
+
+        setData({
+          total,
+          latestCount,
+          ratePerDay,
+          footprintBytes,
+          lastTimestamp: latest.timestamp,
+        });
       }
     } catch (e) {
-      console.error("Failed to fetch structured ingestion event:", e);
-      setLastInsertCount(null);
-      setLastInsertTimestamp(null);
+      console.error(e);
+      setData({});
     }
-    setLoadingStructured(false);
+    setLoading(false);
   };
 
   useEffect(() => {
-    setLoadingRaw(true);
-    setLoadingStructured(true);
-    fetchRawStorage();
+    setLoading(true);
     fetchStructuredStorage();
   }, [refreshKey]);
 
   return (
-    <Card style={{ width: "100%", height: "100%" }}>
+    <Card style={{ width: "100%" }}>
       <Card.Body>
-        <div className="border-bottom d-flex justify-content-between align-items-center mb-2">
-          <h3 className="mb-0" style={{ fontSize: "1.1rem" }}>
-            Data overview
-          </h3>
+        <div className="border-bottom mb-3">
+          <h3 style={{ fontSize: "1.1rem" }}>Data overview</h3>
         </div>
 
-        <div className="mt-2">
-          <div className="fw-semibold">Raw data storage (MinIO)</div>
-          {loadingRaw ? (
-            <div className="text-muted small mt-1">
-              <Spinner animation="border" size="sm" className="me-2" />
-              Loading…
-            </div>
-          ) : (
-            <div className="small mt-1">
-              <div>
-                <span className="text-muted">Available:</span>{" "}
-                <span className="fw-semibold">{formatBytes(rawFreeBytes)}</span>
-              </div>
-              <div>
-                <span className="text-muted">Used:</span>{" "}
-                <span className="fw-semibold">{formatBytes(rawUsedBytes)}</span>{" "}
-                <span className="text-muted">
-                  / {formatBytes(rawTotalBytes)}
-                </span>
-              </div>
-            </div>
-          )}
-        </div>
+        {loading ? (
+          <div className="text-muted small">
+            <Spinner animation="border" size="sm" className="me-2" />
+            Loading…
+          </div>
+        ) : (
+          <>
+            <Row className="g-3">
+              <Col md={6} lg={3}>
+                <StatCard
+                  label="Total ingested"
+                  value={
+                    data.total == null
+                      ? "—"
+                      : `${data.total.toLocaleString()} records`
+                  }
+                />
+              </Col>
 
-        <div className="mt-3">
-          <div className="fw-semibold">Structured data storage (DB)</div>
-          {loadingStructured ? (
-            <div className="text-muted small mt-1">
-              <Spinner animation="border" size="sm" className="me-2" />
-              Loading…
+              <Col md={6} lg={3}>
+                <StatCard
+                  label="Last batch"
+                  value={
+                    data.latestCount == null
+                      ? "—"
+                      : `${data.latestCount} records`
+                  }
+                />
+              </Col>
+
+              <Col md={6} lg={3}>
+                <StatCard
+                  label="Ingestion rate"
+                  value={
+                    data.ratePerDay == null
+                      ? "—"
+                      : `${data.ratePerDay.toLocaleString(undefined, {
+                          maximumFractionDigits: 1,
+                        })}/day`
+                  }
+                />
+              </Col>
+
+              <Col md={6} lg={3}>
+                <StatCard
+                  label="Estimated storage"
+                  value={
+                    data.footprintBytes == null
+                      ? "—"
+                      : formatBytes(data.footprintBytes)
+                  }
+                />
+              </Col>
+            </Row>
+
+            <div className="mt-3 text-muted" style={{ fontSize: "0.8rem" }}>
+              {data.lastTimestamp
+                ? `Last ingestion: ${new Date(
+                    data.lastTimestamp
+                  ).toLocaleString()}`
+                : "No recent ingestion event found"}
             </div>
-          ) : (
-            <div className="small mt-1">
-              <div>
-                <span className="text-muted">Last insertion:</span>{" "}
-                <span className="fw-semibold">
-                  {lastInsertCount == null ? "—" : `${lastInsertCount} records`}
-                </span>
-              </div>
-              <div className="text-muted">
-                {lastInsertTimestamp
-                  ? new Date(lastInsertTimestamp).toLocaleString()
-                  : "No recent ingestion event found"}
-              </div>
-            </div>
-          )}
-        </div>
+          </>
+        )}
       </Card.Body>
     </Card>
   );

@@ -100,6 +100,20 @@ def list_models(db: Session = Depends(get_db)):
     """
     return get_models(db)
 
+@router.get("/modelRuns")
+def list_model_runs(db: Session = Depends(get_db)):
+    """
+    Display all registered model runs with their details.
+    """
+    return get_model_runs(db)
+
+@router.get("/modelrun_logs/{run_id}")
+def get_model_run_logs(run_id: int, db: Session = Depends(get_db)):
+    """
+    Display the logs for a specific model run.
+    """
+    return get_model_run_log(run_id, db)
+
 @router.get("/models/{model_name}")
 def list_model(model_name: str, db: Session = Depends(get_db)) -> Dict[str, Any]:
     """

@@ -43,7 +43,7 @@ export default function EventsDashboard() {
   };
 
   return (
-    <Card className="flat-card events-scroll">
+    <Card className="flat-card  events-scroll dashboard-component">
       <Card.Body>
         <div className="border-bottom d-flex justify-content-between align-items-center mb-3" > 
                 <h3 className="mb-3">Monitoring Events</h3>

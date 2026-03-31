@@ -16,7 +16,7 @@ export default defineConfig(({ mode }) => {
       open: true,
       // this sets a default port to 3000
       port: PORT,
-      host: true
+      host: true,
     },
     preview: {
       open: true,
@@ -25,6 +25,7 @@ export default defineConfig(({ mode }) => {
     define: {
       global: 'window'
     },
+    
     resolve: {
       alias: [
         // { find: '', replacement: path.resolve(__dirname, 'src') },

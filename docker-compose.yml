@@ -43,9 +43,7 @@ services:
       depends_on:
         - watchdog-db
       restart: always
-      volumes:
-        - ./monitoring:/app # Remove in prod
-      command: uvicorn api:app --host 0.0.0.0 --port 8001 --reload # Remove in prod
+
 
   middleware-api:
     container_name: middleware-api
@@ -68,9 +66,6 @@ services:
       MONITORING_API_HOST: watchdog-api
       MONITORING_API_PORT: 8001
     restart: always
-    volumes: # Remove in prod
-      - ./anomaly-detection:/app # Remove in prod
-    command: uvicorn api.src.main:app --host 0.0.0.0 --port 8000 --reload # Remove in prod
 
   scraper:
     container_name: scraper
@@ -83,7 +78,7 @@ services:
       API_URL: http://middleware-api:8000
     volumes:
       - scraper_state:/app/state
-    command: python scraper.py --config 
+    command: python scraper.py --config
 
   pgadmin:
     container_name: pgadmin
@@ -115,18 +110,19 @@ services:
     
   frontend:
     container_name: sensearth-frontend
-    image: node:20-alpine  
-    working_dir: /app
-    volumes:
-      - ./frontend:/app
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
     ports:
-      - "3001:3000"
-    command: sh -c "npm install && npm run dev"
+      - "3001:80"  
+    depends_on:
+      - middleware-api
+    restart: always
+
 
 volumes:
   scraper_state:
   minio_data:
   sensearth_data:
   watchdog_data:
-
 

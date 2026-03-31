@@ -14,7 +14,7 @@ import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import api from '../../../api';
 import monitoring_api from "../../../monitoring_api";
 
-export default function ModelsDashboard( {setModelsUpdated} ) {
+export default function ModelsDashboard({ setModelsUpdated }) {
 
   const [models, setModels] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -110,143 +110,148 @@ export default function ModelsDashboard( {setModelsUpdated} ) {
 
   return (
     <>
-      <Card className="flat-card dashboard-component ">
+      <Card className="flat-card dashboard-component">
         <Card.Body>
-          <Card> 
+          <Card>
             <Card.Body>
-            <div className="border-bottom d-flex justify-content-between align-items-center mb-3" >
-              <h3>Models</h3>
-              <div className="d-flex align-items-center">
-                <IconButton
-                  className='btn-icon-small'
-                  color="primary"
-                  onClick={() => setOpenDialog(true)}
-                >
-                  <AddIcon />
-                </IconButton>
+              <div className="border-bottom d-flex justify-content-between align-items-center mb-3" >
+                <h3>Models</h3>
+                <div className="d-flex align-items-center">
+                  <IconButton
+                    className='btn-icon-small'
+                    color="primary"
+                    onClick={() => setOpenDialog(true)}
+                  >
+                    <AddIcon />
+                  </IconButton>
 
-                <Button
-                  startIcon={<DeleteIcon />}
-                  color="error"
-                  className='btn-icon-small'
-                  onClick={async () => {
-                    try {
-                      if (confirm('Are you sure you want to delete all models?')) {
-                        await api.delete('/models');
-                        // Delete all model components in monitoring system
-                        await Promise.all(
-                          models.map(model =>
-                            monitoring_api.delete(
-                              `/component?name=${encodeURIComponent(model.model_type)}&instance_id=${encodeURIComponent(model.name)}`
+                  <Button
+                    startIcon={<DeleteIcon />}
+                    color="error"
+                    className='btn-icon-small'
+                    onClick={async () => {
+                      try {
+                        if (confirm('Are you sure you want to delete all models?')) {
+                          await api.delete('/models');
+                          // Delete all model components in monitoring system
+                          await Promise.all(
+                            models.map(model =>
+                              monitoring_api.delete(
+                                `/component?name=${encodeURIComponent(model.model_type)}&instance_id=${encodeURIComponent(model.name)}`
+                              )
                             )
-                          )
-                        );
-                        setModelsUpdated(v => v + 1);
-                        fetchModels();
+                          );
+                          setModelsUpdated(v => v + 1);
+                          fetchModels();
+                        }
+                      } catch (error) {
+                        console.error(error);
                       }
-                    } catch (error) {
-                      console.error(error);
-                    }
-                  }}
-                >
-                </Button>
+                    }}
+                  >
+                  </Button>
+                </div>
               </div>
-            </div>
 
-            {loading ? (
-              <div className="text-center">
-                <Spinner animation="border" />
-              </div>
-            ) : (
-              <Table striped bordered hover responsive>
-                <thead>
-                  <tr>
-                    <th>Name</th>
-                    <th>Type</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {models.length === 0 ? (
+              {loading ? (
+                <div className="text-center">
+                  <Spinner animation="border" />
+                </div>
+              ) : (
+                <Table hover responsive size="sm" className="align-middle mb-0">
+                  <thead className="table-light">
                     <tr>
-                      <td colSpan="4" className="text-center">
-                        No models found
-                      </td>
+                      <th style={{ width: "40%" }}>Model</th>
+                      <th style={{ width: "35%" }}>Type</th>
+                      <th style={{ width: "25%" }} className="text-end">Actions</th>
                     </tr>
-                  ) : (
-                    models.map((model) => (
-                      <tr key={model.models_id}>
-
-                        <td style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                          <span style={{ flexGrow: 1, textAlign: "center" }}>
-                            {model.name}
-                          </span>
+                  </thead>
+                  <tbody>
+                    {models.length === 0 ? (
+                      <tr>
+                        <td colSpan="3" className="text-center text-muted py-3">
+                          No models found
                         </td>
-                        <td>{model.model_type || "N/A"}</td>
-                        <td><div style={{ display: "flex", gap: "8px" }}>
-                          {/* Run Button */}
-                          <IconButton
-                            color="primary"
-                            className='btn-icon-small'
-                            onClick={async () => {
-                              try {
-                                if (confirm('Are you sure you want to run this model?')) {
-                                  const payload = {
-                                    model_name: model.name,
-                                    // Optional fields:
-                                    // sensor_id: 1, 2, 3, ....
-                                    // parameters: {...}
-                                  };
-
-                                  const res = await api.post(`/runModel`, payload);
-
-                                  setModelResults(res.data);
-                                  setLogs(prev => [
-                                    ...prev,
-                                    `> Running ${model.name}...`,
-                                    `✔ Model finished`
-                                  ]);
-
-                                  fetchModels();
-                                }
-                              } catch (error) {
-                                console.error(error);
-                              }
-                            }}
-                          >
-                            <PlayArrowIcon />
-                          </IconButton>
-
-                          {/* Delete Button */}
-                          <Button
-                            startIcon={<DeleteIcon />}
-                            color="error"
-                            className='btn-icon-small'
-                            onClick={async () => {
-                              try {
-                                if (confirm('Are you sure you want to delete this model?')) {
-                                  await api.delete(`/models/${encodeURIComponent(model.name)}`);
-                                  await monitoring_api.delete(
-                                    `/component?name=${encodeURIComponent(model.model_type)}&instance_id=${encodeURIComponent(model.name)}` // name of compoent is model_type and instance_id is model name
-                                  );
-                                  setModelsUpdated(v => v + 1);
-                                  fetchModels();
-                                }
-                              } catch (error) {
-                                console.error(error);
-                              }
-                            }}
-                            style={{ textTransform: "none" }}
-                          >
-                          </Button>
-                        </div></td>
                       </tr>
-                    ))
-                  )}
-                </tbody>
-              </Table>
-            )}
-          </Card.Body>
+                    ) : (
+                      models.map((model) => (
+                        <tr key={model.models_id} className="model-row">
+
+                          {/* Name */}
+                          <td>
+                            <div className="fw-semibold text-truncate">
+                              {model.name}
+                            </div>
+                          </td>
+
+                          {/* Type */}
+                          <td>
+                            <span className="badge bg-light text-dark border">
+                              {model.model_type || "N/A"}
+                            </span>
+                          </td>
+
+                          {/* Actions */}
+                          <td>
+                            <div className="d-flex justify-content-end gap-1">
+
+                              <IconButton
+                                size="small"
+                                color="primary"
+                                onClick={async () => {
+                                  try {
+                                    if (confirm('Run this model?')) {
+                                      const res = await api.post(`/runModel`, {
+                                        model_name: model.name,
+                                      });
+
+                                      setModelResults(res.data);
+                                      setLogs(prev => [
+                                        ...prev,
+                                        `> Running ${model.name}...`,
+                                        `✔ Model finished`
+                                      ]);
+
+                                      fetchModels();
+                                    }
+                                  } catch (error) {
+                                    console.error(error);
+                                  }
+                                }}
+                              >
+                                <PlayArrowIcon fontSize="small" />
+                              </IconButton>
+
+                              <IconButton
+                                size="small"
+                                color="error"
+                                onClick={async () => {
+                                  try {
+                                    if (confirm('Delete this model?')) {
+                                      await api.delete(`/models/${encodeURIComponent(model.name)}`);
+                                      await monitoring_api.delete(
+                                        `/component?name=${encodeURIComponent(model.model_type)}&instance_id=${encodeURIComponent(model.name)}`
+                                      );
+                                      setModelsUpdated(v => v + 1);
+                                      fetchModels();
+                                    }
+                                  } catch (error) {
+                                    console.error(error);
+                                  }
+                                }}
+                              >
+                                <DeleteIcon fontSize="small" />
+                              </IconButton>
+
+                            </div>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </Table>
+              )}
+            </Card.Body>
           </Card>
 
           <Card className="flat-card scroll-area">
@@ -257,46 +262,46 @@ export default function ModelsDashboard( {setModelsUpdated} ) {
                 <Card className="mt-3">
                   <Card.Body>
                     <div className="model-results-container">
-                        {transformResults(modelResults.results).map(sensor => {
-                          const errors = sensor.rows.filter(r => r.code === -1).length;
-                          return (
-                            <div key={sensor.sensorId} className="sensor-block">
+                      {transformResults(modelResults.results).map(sensor => {
+                        const errors = sensor.rows.filter(r => r.code === -1).length;
+                        return (
+                          <div key={sensor.sensorId} className="sensor-block">
 
-                              {/* Header */}
-                              <div className="sensor-header">
-                                Sensor {sensor.sensorId} | {errors}/{sensor.rows.length} errors
-                              </div>
-
-                              {/* Table */}
-                              <div className="sensor-table">
-                                {sensor.rows.slice(0, 15).map((row, i) => (
-                                  <div key={i} className="sensor-row">
-                                    <span className="sensor-cell">
-                                      {row.timestamp.toFixed(2)}
-                                    </span>
-                                    <span className="sensor-cell">
-                                      {row.value}
-                                    </span>
-                                    {row.message === "OK" ? (
-                                      <span className="sensor-cell sensor-success">
-                                        {row.message}
-                                      </span>
-                                    ) : row.message.includes("Warning") ? (
-                                      <span className="sensor-cell sensor-warning">
-                                        {row.message}
-                                      </span>
-                                    ) : (
-                                      <span className="sensor-cell sensor-error">
-                                        {row.message}
-                                      </span>
-                                    )}
-                                  </div>
-                                ))}
-                              </div>
+                            {/* Header */}
+                            <div className="dashboard-header">
+                              Sensor {sensor.sensorId} | {errors}/{sensor.rows.length} errors
                             </div>
-                          );
-                        })}
-                      </div>
+
+                            {/* Table */}
+                            <div className="dashboard-table">
+                              {sensor.rows.slice(0, 15).map((row, i) => (
+                                <div key={i} className="dashboard-row">
+                                  <span className="dashboard-cell">
+                                    {row.timestamp.toFixed(2)}
+                                  </span>
+                                  <span className="dashboard-cell">
+                                    {row.value}
+                                  </span>
+                                  {row.message === "OK" ? (
+                                    <span className="dashboard-cell dashboard-success">
+                                      {row.message}
+                                    </span>
+                                  ) : row.message.includes("Warning") ? (
+                                    <span className="dashboard-cell dashboard-warning">
+                                      {row.message}
+                                    </span>
+                                  ) : (
+                                    <span className="dashboard-cell dashboard-error">
+                                      {row.message}
+                                    </span>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
                   </Card.Body>
                 </Card>
               )}
@@ -305,9 +310,6 @@ export default function ModelsDashboard( {setModelsUpdated} ) {
 
         </Card.Body>
       </Card>
-
-
-
 
       {/* Add Model Dialog */}
       <Dialog open={openDialog} onClose={() => setOpenDialog(false)} maxWidth="sm" fullWidth>

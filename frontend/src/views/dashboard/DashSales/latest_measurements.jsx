@@ -35,7 +35,7 @@ function parseAndFormatLocation(locationStr) {
                   <Spinner animation="border" />
                 </div>
               ) : (
-                <Table className="sensor-table">
+                <Table className="dashboard-table">
                   <thead>
                     <tr>
                       <th>Sensor</th>

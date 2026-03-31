@@ -17,7 +17,7 @@ FROM python:3.8-slim
 WORKDIR /app
 
 COPY requirements.txt .
-RUN pip install -r requirements.txt
+RUN pip install --default-timeout=1000 --retries 10 -r requirements.txt
 
 # Copy application code
 COPY ./api ./api

@@ -54,9 +54,7 @@ export default function IngestionStatus({ modelsUpdated }) {
 
   return (
     <div style={{ width: "100%", height: "100%" }}>
-      <Card
-        className="flat-card dashboard-component"
-      >
+      <Card className="flat-card" >
         <Card.Body>
           <div className="border-bottom d-flex justify-content-between align-items-center mb-2">
             <h3 className="mb-0" style={{ fontSize: "1.1rem" }}>

@@ -603,6 +603,51 @@ def get_model(model_name: str, db: Session):
 
     return row
 
+def get_model_runs(db: Session):
+    """
+    Fetch all registered model runs with their details.
+    """
+    db_healthcheck(db)
+
+    try:
+        rows = db.execute(
+            text("SELECT run_id, model_id, started_at, finished_at, status FROM model_run")
+        ).mappings().fetchall()
+
+        if not rows:
+            logger.info("No model runs found in database")
+            return []
+
+        return rows
+    except Exception as e:
+        logger.error("Error fetching model runs", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to fetch model runs")
+
+def get_model_run_log(run_id: int, db: Session):
+    """
+    Fetch the logs for a specific model run.
+    Fetch all logs if run_id is not provided.
+    """
+    db_healthcheck(db)
+    try:
+        if run_id:
+            rows = db.execute(
+                text("SELECT * FROM model_inference WHERE run_id = :run_id"),
+                {"run_id": run_id}
+            ).mappings().fetchall()
+        else:
+            rows = db.execute(
+                text("SELECT * FROM model_inference")
+            ).mappings().fetchall()
+
+        if not rows:
+            logger.info("No model run logs found in database")
+            return []
+        return rows
+    except Exception as e:
+        logger.error("Error fetching model run log", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to fetch model run log")
+
 def delete_models(db: Session) -> None:
     """
     Deletes all models from the database. This will delete all models and associated configurations and results.

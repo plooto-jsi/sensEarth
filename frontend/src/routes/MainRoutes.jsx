@@ -6,7 +6,6 @@ import GuestLayout from 'layouts/GuestLayout';
 const DashboardSales = lazy(() => import('../views/dashboard/DashSales/index.jsx'));
 
 const Typography = lazy(() => import('../views/ui-elements/basic/BasicTypography'));
-const Color = lazy(() => import('../views/ui-elements/basic/BasicColor'));
 
 const FeatherIcon = lazy(() => import('../views/ui-elements/icons/Feather'));
 const FontAwesome = lazy(() => import('../views/ui-elements/icons/FontAwesome'));
@@ -31,10 +30,6 @@ const MainRoutes = {
         {
           path: '/typography',
           element: <Typography />
-        },
-        {
-          path: '/color',
-          element: <Color />
         },
         {
           path: '/icons/Feather',
