@@ -155,7 +155,7 @@ export default function DataOverview({ refreshKey }) {
                       ? "—"
                       : `${data.ratePerDay.toLocaleString(undefined, {
                           maximumFractionDigits: 1,
-                        })}/day`
+                        })}/d`
                   }
                 />
               </Col>

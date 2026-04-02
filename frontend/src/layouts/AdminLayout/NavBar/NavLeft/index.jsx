@@ -74,7 +74,7 @@ export default function NavLeft() {
       </Link>
     {/* Models webpage */}
       <Link to="/typography" className="text-decoration-none nav-item-link">
-        Model logs
+        Models
       </Link>
 
 </div>

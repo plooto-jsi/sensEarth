@@ -139,7 +139,7 @@ export default function ModelsOverview({ refreshKey }) {
 
           {/* Configs */}
           <div className="flex-fill" style={{ minWidth: "100px" }}>
-            <div className="fw-semibold small">Configs</div>
+            <div className="fw-semibold small">Models</div>
             {loadingModels ? (
               <div className="text-muted small mt-1">
                 <Spinner animation="border" size="sm" className="me-2" />
@@ -150,7 +150,7 @@ export default function ModelsOverview({ refreshKey }) {
                 <div className="fw-bold" style={{ fontSize: "1.4rem" }}>
                   {configCount}
                 </div>
-                <div className="text-muted small">Models</div>
+                <div className="text-muted small">Total number of models</div>
               </div>
             )}
           </div>

@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from typing import Any
 
-
 class Enricher:
     """
     Post-process mapped records to ensure hash-stable coordinate fields.
@@ -63,11 +62,7 @@ class Enricher:
             return None
         return f"{domain_id}|{domain_short_title}"
 
-    def enrich_records(
-        self,
-        records: list[dict[str, Any]],
-        node_meta: dict[str, dict[str, Any]] | None = None,
-    ) -> list[dict[str, Any]]:
+    def enrich_records(self, records: list[dict[str, Any]], node_meta: dict[str, dict[str, Any]] | None = None,) -> list[dict[str, Any]]:
         for record in records:
             node = record.get("node") or {}
             sensors = record.get("sensors") or []
