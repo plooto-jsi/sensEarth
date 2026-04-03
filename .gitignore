@@ -1,10 +1,6 @@
-# Ignores Docker volumes and runtime data
+# Ignores Docker bind mounts and runtime data (MinIO, Postgres, etc.)
 docker_data/
 scraper_state/
-
-# Ignores Postgres data directories
-sensearth_data/
-watchdog_data/
 
 # Ignores Python build artifacts
 monitoring.egg-info
