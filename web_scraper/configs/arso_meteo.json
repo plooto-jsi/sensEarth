@@ -1,0 +1,210 @@
+{
+  "scraper_config": {
+    "name": "ARSO_MeteoSI_Observation_Scraper",
+    "description": "Scraper for meteorological observation data from ARSO MeteoSI XML service",
+    "target_url": "https://meteo.arso.gov.si/uploads/probase/www/observ/surface/text/sl/observation_si_latest.xml",
+    "fetch_interval": 3600,
+    "format": "xml",
+    "root_tag": "metData"
+  },
+  "mapping_config": {
+    "node": {
+      "node_label": "ARSO_Meteo_Station",
+      "node_serial": "domain_id",
+      "longitude": "domain_lon",
+      "latitude": "domain_lat",
+      "altitude": "domain_altitude"
+    },
+    "sensors": [
+      {
+        "sensor_label": "domain_shortTitle",
+        "sensor_name": "ARSO Air Temperature Sensor",
+        "longitude": "domain_lon",
+        "latitude": "domain_lat",
+        "altitude": "domain_altitude",
+        "sensor_description": "Air temperature measurement from ARSO MeteoSI",
+        "measurements": [
+          {
+            "value": "t_degreesC",
+            "timestamp_utc": "tsUpdated_UTC"
+          }
+        ],
+        "sensor_type": {
+          "name": "air_temperature",
+          "phenomenon": "Air Temperature",
+          "unit": "°C",
+          "value_min": -50,
+          "value_max": 60
+        }
+      },
+      {
+        "sensor_label": "domain_shortTitle",
+        "sensor_name": "ARSO Humidity Sensor",
+        "longitude": "domain_lon",
+        "latitude": "domain_lat",
+        "altitude": "domain_altitude",
+        "sensor_description": "Relative humidity measurement from ARSO MeteoSI",
+        "measurements": [
+          {
+            "value": "rh",
+            "timestamp_utc": "tsUpdated_UTC"
+          }
+        ],
+        "sensor_type": {
+          "name": "humidity",
+          "phenomenon": "Relative Humidity",
+          "unit": "%",
+          "value_min": 0,
+          "value_max": 100
+        }
+      },
+      {
+        "sensor_label": "domain_shortTitle",
+        "sensor_name": "ARSO Dew Point Sensor",
+        "longitude": "domain_lon",
+        "latitude": "domain_lat",
+        "altitude": "domain_altitude",
+        "sensor_description": "Dew point temperature measurement from ARSO MeteoSI",
+        "measurements": [
+          {
+            "value": "td_degreesC",
+            "timestamp_utc": "tsUpdated_UTC"
+          }
+        ],
+        "sensor_type": {
+          "name": "dew_point",
+          "phenomenon": "Dew Point Temperature",
+          "unit": "°C",
+          "value_min": -50,
+          "value_max": 50
+        }
+      },
+      {
+        "sensor_label": "domain_shortTitle",
+        "sensor_name": "ARSO Wind Speed Sensor",
+        "longitude": "domain_lon",
+        "latitude": "domain_lat",
+        "altitude": "domain_altitude",
+        "sensor_description": "Wind speed measurement from ARSO MeteoSI",
+        "measurements": [
+          {
+            "value": "ff_val",
+            "timestamp_utc": "tsUpdated_UTC"
+          }
+        ],
+        "sensor_type": {
+          "name": "wind_speed",
+          "phenomenon": "Wind Speed",
+          "unit": "m/s",
+          "value_min": 0,
+          "value_max": 200
+        }
+      },
+      {
+        "sensor_label": "domain_shortTitle",
+        "sensor_name": "ARSO Wind Direction Sensor",
+        "longitude": "domain_lon",
+        "latitude": "domain_lat",
+        "altitude": "domain_altitude",
+        "sensor_description": "Wind direction measurement from ARSO MeteoSI",
+        "measurements": [
+          {
+            "value": "dd_val",
+            "timestamp_utc": "tsUpdated_UTC"
+          }
+        ],
+        "sensor_type": {
+          "name": "wind_direction",
+          "phenomenon": "Wind Direction",
+          "unit": "degrees",
+          "value_min": 0,
+          "value_max": 360
+        }
+      },
+      {
+        "sensor_label": "domain_shortTitle",
+        "sensor_name": "ARSO Pressure Sensor",
+        "longitude": "domain_lon",
+        "latitude": "domain_lat",
+        "altitude": "domain_altitude",
+        "sensor_description": "Atmospheric pressure measurement from ARSO MeteoSI",
+        "measurements": [
+          {
+            "value": "msl_mb",
+            "timestamp_utc": "tsUpdated_UTC"
+          }
+        ],
+        "sensor_type": {
+          "name": "pressure",
+          "phenomenon": "Atmospheric Pressure",
+          "unit": "hPa",
+          "value_min": 800,
+          "value_max": 1100
+        }
+      },
+      {
+        "sensor_label": "domain_shortTitle",
+        "sensor_name": "ARSO Precipitation Sensor",
+        "longitude": "domain_lon",
+        "latitude": "domain_lat",
+        "altitude": "domain_altitude",
+        "sensor_description": "24h precipitation measurement from ARSO MeteoSI",
+        "measurements": [
+          {
+            "value": "rr24h_val",
+            "timestamp_utc": "tsUpdated_UTC"
+          }
+        ],
+        "sensor_type": {
+          "name": "precipitation",
+          "phenomenon": "Precipitation",
+          "unit": "mm",
+          "value_min": 0,
+          "value_max": 500
+        }
+      },
+      {
+        "sensor_label": "domain_shortTitle",
+        "sensor_name": "ARSO Snow Sensor",
+        "longitude": "domain_lon",
+        "latitude": "domain_lat",
+        "altitude": "domain_altitude",
+        "sensor_description": "Snow depth measurement from ARSO MeteoSI",
+        "measurements": [
+          {
+            "value": "snow",
+            "timestamp_utc": "tsUpdated_UTC"
+          }
+        ],
+        "sensor_type": {
+          "name": "snow_depth",
+          "phenomenon": "Snow Depth",
+          "unit": "cm",
+          "value_min": 0,
+          "value_max": 500
+        }
+      },
+      {
+        "sensor_label": "domain_shortTitle",
+        "sensor_name": "ARSO Visibility Sensor",
+        "longitude": "domain_lon",
+        "latitude": "domain_lat",
+        "altitude": "domain_altitude",
+        "sensor_description": "Visibility measurement from ARSO MeteoSI",
+        "measurements": [
+          {
+            "value": "vis_value",
+            "timestamp_utc": "tsUpdated_UTC"
+          }
+        ],
+        "sensor_type": {
+          "name": "visibility",
+          "phenomenon": "Visibility",
+          "unit": "km",
+          "value_min": 0,
+          "value_max": 100
+        }
+      }
+    ]
+  }
+}

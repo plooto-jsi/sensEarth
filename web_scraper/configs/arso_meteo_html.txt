@@ -1,0 +1,101 @@
+{
+  "scraper_config": {
+    "name": "ARSO_MeteoSI_Observation_Scraper_HTML",
+    "description": "Scraper for meteorological observation data from ARSO MeteoSI HTML service",
+    "target_url": "https://meteo.arso.gov.si/uploads/probase/www/observ/surface/text/sl/observation_NOVA-GOR_history.html",
+    "fetch_interval": 3600,
+    "format": "html",
+    "root_tag": "//table[contains(@class,'meteoSI-table')]/tbody/tr"
+  },
+  "mapping_config": {
+    "node": {
+      "node_label": "ARSO_Meteo_Station",
+      "node_serial": "meteoSI-header",
+      "longitude": null,
+      "latitude": null,
+      "altitude": null
+    },
+    "sensors": [
+      {
+        "sensor_label": "meteoSI-header",
+        "sensor_name": "Weather Condition",
+        "measurements": [
+          {
+            "value": "wwsyn_longText",
+            "timestamp_utc": "meteoSI-header"
+          }
+        ]
+      },
+      {
+        "sensor_label": "meteoSI-header",
+        "sensor_name": "Air Temperature Sensor",
+        "measurements": [
+          {
+            "value": "t",
+            "timestamp_utc": "meteoSI-header"
+          }
+        ],
+        "sensor_type": {
+          "name": "air_temperature",
+          "phenomenon": "Air Temperature",
+          "unit": "°C"
+        }
+      },
+      {
+        "sensor_label": "meteoSI-header",
+        "sensor_name": "Wind Speed Sensor",
+        "measurements": [
+          {
+            "value": "ff_val",
+            "timestamp_utc": "meteoSI-header"
+          }
+        ],
+        "sensor_type": {
+          "name": "wind_speed",
+          "phenomenon": "Wind Speed",
+          "unit": "km/h"
+        }
+      },
+      {
+        "sensor_label": "meteoSI-header",
+        "sensor_name": "Wind Gust Sensor",
+        "measurements": [
+          {
+            "value": "ffmax_val",
+            "timestamp_utc": "meteoSI-header"
+          }
+        ]
+      },
+      {
+        "sensor_label": "meteoSI-header",
+        "sensor_name": "Pressure Sensor",
+        "measurements": [
+          {
+            "value": "msl",
+            "timestamp_utc": "meteoSI-header"
+          }
+        ],
+        "sensor_type": {
+          "name": "pressure",
+          "phenomenon": "Atmospheric Pressure",
+          "unit": "hPa"
+        }
+      },
+      {
+        "sensor_label": "meteoSI-header",
+        "sensor_name": "Precipitation Sensor",
+        "measurements": [
+          {
+            "value": "rr24h_val",
+            "timestamp_utc": "meteoSI-header"
+          }
+        ],
+        "sensor_type": {
+          "name": "precipitation",
+          "phenomenon": "Precipitation",
+          "unit": "mm"
+        }
+      }
+    ]
+  }
+}

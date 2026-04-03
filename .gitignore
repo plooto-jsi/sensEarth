@@ -1,0 +1,10 @@
+# Ignores Docker bind mounts and runtime data (MinIO, Postgres, etc.)
+docker_data/
+scraper_state/
+
+# Ignores Python build artifacts
+monitoring.egg-info
+__pycache__/
+*.pyc
+
+node_modules/

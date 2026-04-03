@@ -1,0 +1,6 @@
+requests
+aiohttp
+lxml
+minio
+psycopg2-binary
+
