@@ -56,7 +56,7 @@ services:
       dockerfile: Dockerfile
     working_dir: /app
     ports:
-      - "8000:8000"
+      - "5006:8000"
     depends_on:
       - sensearth-db
       - watchdog-api
@@ -92,7 +92,7 @@ services:
       PGADMIN_DEFAULT_PASSWORD: admin
       PGADMIN_CONFIG_SERVER_MODE: "False"
     ports:
-      - "8080:80"
+      - "8082:80"
     volumes:
       - ./pgadmin/servers.json:/pgadmin4/servers.json
     depends_on:
@@ -118,7 +118,7 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
     ports:
-      - "3001:80"  
+      - "5005:80"  
     depends_on:
       - middleware-api
     restart: always
