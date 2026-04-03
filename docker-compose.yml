@@ -3,7 +3,7 @@ services:
   sensearth-db:
     container_name: sensearth-db
     image: timescale/timescaledb-ha:pg14-latest
-    user: "1000:1000"
+    user: root # to avoid permission errors, remove later
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
@@ -12,7 +12,7 @@ services:
     ports:
       - "5433:5432"
     volumes:
-      - ./docker_data/sensearth_pgdata:/home/postgres/pgdata
+      - ./docker_data/postgres_sensearth:/home/postgres/pgdata/data
       - ./init_db/sensearth.dump:/docker-entrypoint-initdb.d/sensearth.dump
       - ./init_db/restore-sensearth.sh:/docker-entrypoint-initdb.d/restore.sh
     restart: always
@@ -21,7 +21,7 @@ services:
   watchdog-db:
     container_name: watchdog-db
     image: timescale/timescaledb-ha:pg14-latest
-    user: "1000:1000"
+    user: root # to avoid permission errors, remove later
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
@@ -30,7 +30,7 @@ services:
     ports:
       - "5434:5432"
     volumes:
-      - ./docker_data/watchdog_pgdata:/home/postgres/pgdata
+      - ./docker_data/postgres_watchdog:/home/postgres/pgdata/data
       - ./init_db/monitoring.dump:/docker-entrypoint-initdb.d/monitoring.dump
       - ./init_db/restore-monitoring.sh:/docker-entrypoint-initdb.d/restore.sh
     restart: always
@@ -126,5 +126,4 @@ services:
 
 volumes:
   scraper_state:
-  minio_data:
 
