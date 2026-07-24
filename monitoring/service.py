@@ -5,7 +5,6 @@ from psycopg2.extras import Json
 import traceback
 from utils import *
 
-
 component_id_cache: dict[tuple[str, str], int] = {}
 
 def get_component_id(name: str, instance_id: str, db: Session) -> int | None:
@@ -157,12 +156,28 @@ def get_events_db(db: Session):
             FROM events e
             JOIN components c ON e.component_id = c.component_id
             ORDER BY e.timestamp DESC
-            LIMIT 100
+            LIMIT 1000
         """)).mappings().all()
         logger.info(f"Fetched {len(rows)} events from database")
         return rows
     except Exception as e:
         logger.error(f"Error fetching events: {e}")
+        traceback.print_exc()
+        return []
+
+def get_metrics_db(db: Session):
+    try:
+        rows = db.execute(text("""
+            SELECT m.*, c.name AS component_name, c.instance_id AS component_instance_id
+            FROM metrics m
+            JOIN components c ON m.component_id = c.component_id
+            ORDER BY m.timestamp DESC
+            LIMIT 1000
+        """)).mappings().all()
+        logger.info(f"Fetched {len(rows)} metrics from database")
+        return rows
+    except Exception as e:
+        logger.error(f"Error fetching metrics: {e}")
         traceback.print_exc()
         return []
 

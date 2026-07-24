@@ -66,45 +66,104 @@ Requirements for monitoring:
 
 ### User Interface
 
-* use a framework, like Next.js
+* use React + Vite (see `frontend/`)
 * framework should display data from all the above components; monitoring, status of scrapers, data, models
 * it should have a dashboard + possiblity to build custom dashboards
 * it should have a detailed view of the data
 * it should show error metrics of the models through time
 
-## Simple architecture
+## Architecture
+
+High-level component view (all services run via Docker Compose):
 
 ```mermaid
-graph TD
-  D1[Data Source 1] --> A
-  D2[DS2] --> A
-  D3[DS3] --> A
-
-  A[Scrapers] --> B
-  B --> C[Model Services]
-  C --> B
-  B --> D[User Interface]
-  MON --> D
-
-  subgraph B [Middleware / API]
-    direction TB
-    B1[Raw Data Storage]
-    B2[Structured Data Storage]
+flowchart TB
+ subgraph DOCKER["Docker Compose"]
+        SCR["Scrapers<br>web_scraper"]
+        MINIO[("MinIO<br>raw storage")]
+        MW["Middleware<br>FastAPI"]
+        DB[("Core DB<br>PostgreSQL · TimescaleDB · PostGIS")]
+        MODEL["Modeling<br>anomaly detection · forecasting"]
+        MON["Monitoring<br>Monitoring API"]
+        MONDB[("Monitoring DB<br>PostgreSQL")]
+        UI["Web UI<br>Nginx · React · Vite · MapLibre"]
   end
-
-  subgraph MON[Monitoring / WatchDog]
-    direction TB
-    M[Watchdogs for all components]
-  end
-
-  A -.-> MON
-  B -.-> MON
-  C -.-> MON
-  D -.-> MON
+    SRC["External sources<br>ARSO, Goriva.si, …"] --> SCR
+    SCR --> MINIO & MW
+    MW --> DB & MODEL
+    MODEL --> DB
+    MW -.-> MON
+    SCR -.-> MON
+    MODEL -.-> MON
+    MON --> MONDB
+    USER(["Browser"]) --> UI
+    UI -- /middleware --> MW
+    UI -- /monitoring --> MON
 ```
 
-## Roadmap
+**Legend:** solid arrows = main data flow; dashed arrows = telemetry / monitoring and API proxy paths.
 
-- [ ] Create robust scraping
-- [ ] Create robust middleware
-- [ ] Create robust modeling for anomaly detection
+## How to Run
+
+### Prerequisites
+- Docker and Docker Compose installed on your system.
+
+### Setup
+1. Clone the repository:
+   ```
+   git clone <repository-url>
+   cd sensEarth
+   ```
+
+2. Create a `.env` file in the root directory with the following environment variables or use .env.example:
+   
+   sensEarth/
+   ```
+   CORE_DB_URL=postgresql://postgres:postgres@localhost:5433/sensearth_db
+   MONITORING_DB_URL=postgresql://postgres:postgres@localhost:5434/monitoring_db
+   MIDDLEWARE_API=http://middleware-api:5006
+   MONITORING_API=http://monitoring-api:8001
+
+   ```
+  
+  sensEarth/frontend/
+  ```
+   VITE_MIDDLEWARE_API_URL=http://localhost:5006
+   VITE_MONITORING_API_URL=http://localhost:8001
+  ```
+  
+  In production, the frontend is configured to proxy API calls through Nginx at `/middleware` and `/monitoring`.
+  The static build uses `frontend/.env.production` to route to the backend via the same origin.
+
+3. Start the services:
+   ```
+   docker compose up
+   ```
+   This will build and start all containers, including databases, APIs, scrapers, and the frontend.
+
+### Access Points
+- **Frontend**: http://localhost:5005
+- **Middleware API**: http://localhost:5006
+- **Monitoring API**: http://localhost:8001
+- **pgAdmin**: http://localhost:8082
+- **MinIO Console**: http://localhost:9001 
+- **Core DB**: localhost:5433
+- **Monitoring DB**: localhost:5434
+
+### Running Specific Services
+- To run only certain services, use: `docker compose up <service-name>`
+- For development, you can run services individually or use `docker compose up --build` to rebuild images.
+
+### Scrapers
+- Scrapers run automatically as part of the `scraper` service.
+- To run historic imports or specific configs, use commands like:
+  ```
+  docker compose run scraper python scraper.py --historic
+  docker compose run scraper python scraper.py --config arso_meteo
+  ```
+
+### Stopping
+```
+- Stop all services: `docker compose down`
+- Remove volumes: `docker compose down -v`
+  ```

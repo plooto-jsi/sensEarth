@@ -15,6 +15,7 @@ from psycopg2.extras import Json
 
 from ..database import get_db
 from ..modeling_services.anomaly_detection_model import AnomalyDetectionModel
+from ..modeling_services.forecast_model import ForecastModel
 
 from .models import *
 from .schemas import *
@@ -28,10 +29,81 @@ from sqlalchemy.exc import IntegrityError
 
 MODEL_REGISTRY = {
     "anomaly_detection_model": AnomalyDetectionModel,
+    "forecast_model": ForecastModel,  
 }
 
 CONFIG_DIR = os.path.abspath("configuration")
 DATA_DIR = os.path.abspath("data")
+
+# Sensors with no contact for this many days are marked inactive
+SENSOR_INACTIVITY_DAYS = 7
+
+
+def mark_sensors_as_seen(sensor_ids: List[int], db: Session) -> None:
+    """
+    Mark sensors as recently seen by refreshing last_seen and setting status to active.
+    """
+    if not sensor_ids:
+        return
+
+    unique_sensor_ids = list(set(sensor_ids))
+    db.execute(
+        text("""
+            UPDATE sensor
+            SET last_seen = NOW(),
+                status = 'active'
+            WHERE sensor_id = ANY(:sensor_ids)
+        """),
+        {"sensor_ids": unique_sensor_ids},
+    )
+
+
+def deactivate_stale_sensors(db: Session, inactive_after_days: int = SENSOR_INACTIVITY_DAYS) -> int:
+    """
+    Mark active sensors as inactive when they have not been seen recently.
+    Returns:
+        Number of sensors deactivated in this run.
+    """
+    if inactive_after_days <= 0:
+        raise ValueError("inactive_after_days must be a positive integer")
+
+    result = db.execute(
+        text("""
+            UPDATE sensor
+            SET status = 'inactive'
+            WHERE status = 'active'
+              AND last_seen < NOW() - make_interval(days => :inactive_after_days)
+        """),
+        {"inactive_after_days": inactive_after_days},
+    )
+    db.commit()
+
+    deactivated_count = result.rowcount if result.rowcount is not None and result.rowcount >= 0 else 0
+
+    emit_metric(
+        name="middleware",
+        instance_id="default",
+        metric_name="sensors_deactivated",
+        value=deactivated_count,
+        unit="count",
+    )
+    emit_event(
+        name="middleware",
+        instance_id="default",
+        event_type="sensors_deactivated",
+        severity="INFO",
+        message=f"Deactivated {deactivated_count} sensor(s) with last_seen older than {inactive_after_days} day(s)",
+    )
+    logger.info(
+        "Deactivated stale sensors",
+        extra={
+            "deactivated_count": deactivated_count,
+            "inactive_after_days": inactive_after_days,
+        },
+    )
+
+    return deactivated_count
+
 
 def register_entities(payload: RegisterPayload, db: Session) -> Dict[str, Dict[str, int]]:
     """
@@ -167,6 +239,7 @@ def register_entities(payload: RegisterPayload, db: Session) -> Dict[str, Dict[s
             ON CONFLICT (node_id, sensor_hash)
             DO UPDATE SET
                 last_seen = NOW(),
+                status = 'active',
                 sensor_label = EXCLUDED.sensor_label
             RETURNING sensor_id
         """)
@@ -231,20 +304,31 @@ def ingest_measurements(payload: dataIngestPayload, db: Session) -> Dict[str, An
         ).fetchall()
         hash_to_id = {row[0]: row[1] for row in rows}
 
+    skipped_invalid_hash = 0
     for measurement in payload:
         sensor_hash = measurement.sensor_hash
         ts = measurement.timestamp_utc
         value = measurement.value
 
         sensor_id_db = hash_to_id.get(sensor_hash)
-        if sensor_id_db is None: # ID in database not found
-            raise HTTPException(status_code=404, detail=f"Sensor '{sensor_hash}' not found")
+        if sensor_id_db is None:
+            logger.warning(f"Sensor hash '{sensor_hash}' not found, skipping measurement")
+            skipped_invalid_hash += 1
+            continue
         try:
             val = float(value)
             measurement_buffer.append((sensor_id_db, ts, val))
         except (TypeError, ValueError):
             logger.warning(f"Skipping invalid measurement: {measurement}")
             continue
+
+    emit_metric(
+        name="middleware",
+        instance_id="default",
+        metric_name="skipped_invalid_hash",
+        value=skipped_invalid_hash,
+        unit="count"
+    )
 
     if measurement_buffer:  
         conn = db.get_bind().raw_connection()  # get psycopg2 connection
@@ -263,6 +347,11 @@ def ingest_measurements(payload: dataIngestPayload, db: Session) -> Dict[str, An
             conn.commit()
         finally:
             conn.close()
+        
+        # Mark sensors as seen
+        seen_sensor_ids = [sensor_id for sensor_id, _ts, _value in measurement_buffer]
+        mark_sensors_as_seen(seen_sensor_ids, db)
+
     db.commit()
 
     # TODO: check lenght of buffer
@@ -531,9 +620,14 @@ async def model_results(payload: Dict, MODEL_REGISTRY: Dict[str, Any], db: Sessi
 
             timestamp_float = entry[0][0]
             value = entry[0][1]
-            inference_message = entry[1][0]
 
-            timestamp_utc = unix_epoch + timedelta(days=timestamp_float)
+            if model_type == "anomaly_detection_model": # Writes the anomaly detection message
+                inference_message = entry[1][0]
+
+            elif model_type == "forecast_model": # Writes forecast prediction
+                inference_message = entry[1][2]
+
+            timestamp_utc = unix_epoch + timedelta(seconds=timestamp_float)
 
             rows.append({
                 "run_id": model_run_id,
@@ -574,7 +668,7 @@ def get_models(db: Session):
     db_healthcheck(db)
 
     rows = db.execute(
-        text("SELECT model_id, name, description, model_type FROM model")
+        text("SELECT model_id, name, description, model_type, parameters FROM model")
     ).mappings().fetchall()
 
     if not rows:
@@ -728,22 +822,35 @@ def get_node(node_id: int, db: Session):
 
     return row
 
-def get_sensors(db: Session):
+def get_sensors(db: Session, status: Optional[str] = None):
     """
-    Fetch all registered sensors with their details.
+    Fetch registered sensors with their details.
+
+    Args:
+        status: If set, only return sensors with this status (e.g. 'active').
+                If None, return all sensors.
     """
     db_healthcheck(db)
 
+    # Filter by status if provided
+    where_sql = "WHERE s.status = :status" if status is not None else ""
+    params = {"status": status} if status is not None else {}
+
     rows = db.execute(
-        text("""
+        text(f"""
             SELECT s.sensor_id, s.sensor_label, ST_AsGeoJSON(s.location) AS location, st.name, s.status AS sensor_status
             FROM sensor s
             JOIN sensor_type st ON s.sensor_type_id = st.sensor_type_id
-        """)
+            {where_sql}
+        """),
+        params,
     ).mappings().fetchall()
 
     if not rows:
-        logger.info("No sensors found in database")
+        logger.info(
+            "No sensors found in database"
+            + (f" with status='{status}'" if status is not None else "")
+        )
 
     return rows
 

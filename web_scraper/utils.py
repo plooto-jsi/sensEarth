@@ -57,20 +57,25 @@ def safe_emit(func, **kwargs):
     except Exception:
         pass
 
-def normalize_altitude(payload: dict):
+def normalize(payload: dict):
     """
-    If altitude is described as 'kota_0', set it to 0.0
-    for all nodes and sensors in the payload.
+    Registration-time fixes for fields that may appear on node/sensor
+    entries in the /register payload but outside mapped measurements.
+
     """
     for entity_type in ("nodes", "sensors"):
         for item in payload.get(entity_type, []):
-            if str(item.get("altitude", "")).lower() == "kota_0":
-                label_key = "node_label" if entity_type == "nodes" else "sensor_label"
-                print(f"Set altitude=0 for {entity_type[:-1]} {item.get(label_key)} based on description 'kota_0'")
-                item["altitude"] = 0.0
+            if "timestamp_utc" not in item:
+                continue
+            ts = item.get("timestamp_utc")
+            if ts is None or (isinstance(ts, str) and ts.strip().lower() in ("", "null")):
+                item["timestamp_utc"] = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
 
 
 def normalize_timestamp(ts: str) -> str:
+    if ts is None or ts.strip() == "" or ts.lower().strip() == "null":
+        return datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
+
     ts = ts.strip().replace("UTC", "").strip()
 
     formats = [
@@ -81,6 +86,9 @@ def normalize_timestamp(ts: str) -> str:
         "%Y-%m-%d %H:%M:%S",
         "%Y-%m-%dT%H:%M:%S",
     ]
+
+    if ts == "" or ts.lower() == "null":
+        return datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
 
     for fmt in formats:
         try:

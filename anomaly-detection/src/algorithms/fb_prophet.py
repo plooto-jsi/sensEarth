@@ -181,7 +181,7 @@ class fb_Prophet(AnomalyDetectionAbstract):
                 self.samples_since_retrain = 0
                 self.train_model()
 
-        return status, status_code
+        return status, status_code, boundries[1]  
 
     def train_model(self):
         # Check if enough samples in memory
@@ -195,7 +195,7 @@ class fb_Prophet(AnomalyDetectionAbstract):
         if not pd.api.types.is_datetime64_any_dtype(self.memory_dataframe["ds"]):
             self.memory_dataframe["ds"] = pd.to_datetime(self.memory_dataframe["ds"])
 
-        # Initialize new model
+        # Initialize new model, you can add monthly, weekly or yearly_seasonality=True
         self.model = Prophet()
 
         # Fit the model

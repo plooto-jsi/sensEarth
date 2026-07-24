@@ -1,15 +1,35 @@
+
 // react-bootstrap
 import { ListGroup, Dropdown } from 'react-bootstrap';
+import React, { useState, useEffect } from 'react';
+
 
 // third party
 import FeatherIcon from 'feather-icons-react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 
 // -----------------------|| NAV LEFT ||-----------------------//
 
 export default function NavLeft() {
+    const [activeTab, setActiveTab] = useState("dashboard");
+    const location = useLocation();
+    useEffect(() => {
+      const currentPath = location.pathname;
+      if (currentPath === "/dashboard") {
+        setActiveTab("dashboard");
+      }
+      else if (currentPath === "/model-logs") {
+        setActiveTab("model-logs");
+      }
+      else if (currentPath === "/user-dashboard") {
+        setActiveTab("user-dashboard");
+      } 
+      else {
+        setActiveTab("");
+      }
+    }, [location.pathname]);
   return (
-    <div className="nav-left-horizontal d-flex align-items-center gap-3">
+    <div className="nav-left-horizontal d-flex align-items-center gap-3 margin-top-10">
       
     <ListGroup as="ul" bsPrefix=" " className="list-unstyled">
       <Dropdown as="li" className="pc-h-item">
@@ -69,14 +89,17 @@ export default function NavLeft() {
     </ListGroup>
     
     {/* Dashboard webpage */}
-      <Link to="/dashboard/sales" className="text-decoration-none nav-item-link">
-        Dashboard
+      <Link to="/dashboard" className={activeTab === "dashboard" ? "leftnav-header active" : "leftnav-header"}>
+        Operations
       </Link>
     {/* Models webpage */}
-      <Link to="/typography" className="text-decoration-none nav-item-link">
+      <Link to="/model-logs" className={activeTab === "model-logs" ? "leftnav-header active" : "leftnav-header"}>
         Models
       </Link>
-
+    {/* User dashboard webpage */}
+      <Link to="/user-dashboard" className={activeTab === "user-dashboard" ? "leftnav-header active" : "leftnav-header"}>
+        Analysis
+      </Link>
 </div>
   );
 }
